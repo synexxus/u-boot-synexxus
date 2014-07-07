@@ -1,0 +1,6 @@
+mxc_ipuv3_fb.c:399:12:mxcfb_map_video_memory	16	static
+mxc_ipuv3_fb.c:39:6:fb_videomode_to_var	0	static
+mxc_ipuv3_fb.c:570:6:ipuv3_fb_shutdown	16	static
+mxc_ipuv3_fb.c:589:7:video_hw_init	96	static
+mxc_ipuv3_fb.c:603:6:video_set_lut	0	static
+mxc_ipuv3_fb.c:612:5:ipuv3_fb_init	0	static

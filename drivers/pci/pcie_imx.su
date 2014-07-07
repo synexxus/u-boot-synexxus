@@ -1,0 +1,12 @@
+pcie_imx.c:301:17:get_bus_address	0	static
+pcie_imx.c:325:12:imx_pcie_addr_valid	0	static
+pcie_imx.c:86:12:9	16	static
+pcie_imx.c:162:12:7	16	static
+pcie_imx.c:106:12:6	16	static
+pcie_imx.c:132:12:5	16	static
+pcie_imx.c:365:12:imx_pcie_read_config	16	static
+pcie_imx.c:394:12:imx_pcie_write_config	24	static
+pcie_imx.c:454:12:imx6_pcie_toggle_power	0	static
+pcie_imx.c:465:12:imx6_pcie_toggle_reset	8	static
+pcie_imx.c:570:6:imx_pcie_init	24	static
+pcie_imx.c:614:6:pci_init_board	0	static

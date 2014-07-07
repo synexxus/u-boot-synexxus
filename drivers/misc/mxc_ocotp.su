@@ -1,0 +1,7 @@
+mxc_ocotp.c:77:12:finish_access	16	static
+mxc_ocotp.c:114:13:set_timing	32	static
+mxc_ocotp.c:57:12:prepare_access	16	static
+mxc_ocotp.c:100:5:fuse_read	32	static
+mxc_ocotp.c:148:5:fuse_sense	40	static
+mxc_ocotp.c:171:5:fuse_prog	40	static
+mxc_ocotp.c:188:5:fuse_override	32	static

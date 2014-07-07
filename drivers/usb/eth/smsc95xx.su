@@ -1,0 +1,13 @@
+smsc95xx.c:779:13:smsc95xx_halt	0	static
+smsc95xx.c:674:12:smsc95xx_send	1616	static
+smsc95xx.c:710:12:smsc95xx_recv	32	static
+smsc95xx.c:151:12:2	96	static
+smsc95xx.c:371:12:smsc95xx_write_hwaddr	24	static
+smsc95xx.c:171:12:3	104	static
+smsc95xx.c:192:12:smsc95xx_phy_wait_not_busy	24	static
+smsc95xx.c:206:12:smsc95xx_mdio_read	24	static
+smsc95xx.c:230:13:smsc95xx_mdio_write	24	static
+smsc95xx.c:457:12:smsc95xx_init	48	static
+smsc95xx.c:787:6:smsc95xx_eth_before_probe	0	static
+smsc95xx.c:806:5:smsc95xx_eth_probe	24	static
+smsc95xx.c:881:5:smsc95xx_eth_get_info	16	static

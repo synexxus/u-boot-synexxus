@@ -1,0 +1,13 @@
+soc.c:38:5:get_cpu_rev	0	static
+soc.c:65:12:get_board_rev	8	static
+soc.c:79:6:init_aips	0	static
+soc.c:210:5:arch_cpu_init	8	static
+soc.c:235:5:board_postclk_init	8	static
+soc.c:243:6:enable_caches	8	static
+soc.c:253:6:imx_get_mac_from_fuse	0	static
+soc.c:273:6:boot_mode_apply	0	static
+soc.c:308:6:s_init	8	static
+soc.c:341:6:imx_enable_hdmi_phy	8	static
+soc.c:357:6:imx_setup_hdmi	0	static
+soc.c:383:6:v7_outer_cache_enable	0	static
+soc.c:429:6:v7_outer_cache_disable	0	static

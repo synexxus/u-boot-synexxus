@@ -1,0 +1,5 @@
+libata.c:11:5:ata_id_n_sectors	20	static
+libata.c:23:5:ata_dev_classify	0	static
+libata.c:62:6:ata_id_c_string	16	static
+libata.c:75:6:ata_dump_id	96	static
+libata.c:138:6:ata_swap_buf_le16	0	static

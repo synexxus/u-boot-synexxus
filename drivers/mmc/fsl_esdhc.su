@@ -1,0 +1,7 @@
+fsl_esdhc.c:507:12:esdhc_getcd	16	static
+fsl_esdhc.c:454:13:esdhc_set_ios	32	static
+fsl_esdhc.c:472:12:esdhc_init	16	static
+fsl_esdhc.c:266:1:esdhc_send_cmd	32	static
+fsl_esdhc.c:544:5:fsl_esdhc_initialize	24	static
+fsl_esdhc.c:624:5:fsl_esdhc_mmc_init	8	static
+fsl_esdhc.c:635:6:fdt_fixup_esdhc	24	static
