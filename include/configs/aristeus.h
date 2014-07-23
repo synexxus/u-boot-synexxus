@@ -289,9 +289,9 @@
 				"for fs in fat ext2 ; do " \
 					"${fs}load " \
 						"${dtype} ${disk}:1 " \
-						"10008000 " \
+						"10800000 " \
 						"/6x_bootscript" \
-						"&& source 10008000 ; " \
+						"&& source 10800000 ; " \
 				"done ; " \
 			"done ; " \
 		"done; " \
@@ -303,9 +303,9 @@
 		"; do " \
 		"for disk in 0 1 ; do ${dtype} dev ${disk} ;" \
 		     "for fs in fat ext2 ; do " \
-				"${fs}load ${dtype} ${disk}:1 10008000 " \
+				"${fs}load ${dtype} ${disk}:1 10800000 " \
 					"/6x_upgrade " \
-					"&& source 10008000 ; " \
+					"&& source 10800000 ; " \
 			"done ; " \
 		"done ; " \
 	"done\0" \
