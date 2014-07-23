@@ -15,47 +15,47 @@ setexpr nextcon $nextcon + 1
 #echo "------ no HDMI monitor";
 #fi
 
-i2c dev 2
-if i2c probe 0x04 ; then
-setenv bootargs $bootargs video=mxcfb${nextcon}:dev=ldb,LDB-XGA,if=RGB666
-if test "0" -eq $nextcon; then
-setenv fbmem "fbmem=10M";
-else
-setenv fbmem ${fbmem},10M
-fi
+#i2c dev 2
+#if i2c probe 0x04 ; then
+#setenv bootargs $bootargs video=mxcfb${nextcon}:dev=ldb,LDB-XGA,if=RGB666
+#if test "0" -eq $nextcon; then
+#setenv fbmem "fbmem=10M";
+#else
+#setenv fbmem ${fbmem},10M
+#fi
 setexpr nextcon $nextcon + 1
-else
-echo "------ no Freescale display";
-fi
+#else
+#echo "------ no Freescale display";
+#fi
 
-if i2c probe 0x38 ; then
-if itest.s "xLDB-WXGA" == "x$panel"; then
-setenv bootargs $bootargs video=mxcfb${nextcon}:dev=ldb,1280x800MR@60,if=RGB666
-screenres=1280,800
-else
-setenv bootargs $bootargs video=mxcfb${nextcon}:dev=ldb,1024x600M@60,if=RGB666
-screenres=1024,600
-fi
-if test "0" -eq $nextcon; then
-setenv fbmem "fbmem=10M";
-else
-setenv fbmem ${fbmem},10M
-fi
+#if i2c probe 0x38 ; then
+#if itest.s "xLDB-WXGA" == "x$panel"; then
+#setenv bootargs $bootargs video=mxcfb${nextcon}:dev=ldb,1280x800MR@60,if=RGB666
+#screenres=1280,800
+#else
+#setenv bootargs $bootargs video=mxcfb${nextcon}:dev=ldb,1024x600M@60,if=RGB666
+#screenres=1024,600
+#fi
+#if test "0" -eq $nextcon; then
+##setenv fbmem "fbmem=10M";
+#else
+#setenv fbmem ${fbmem},10M
+#fi
 setexpr nextcon $nextcon + 1
-setenv bootargs $bootargs ft5x06_ts.screenres=$screenres
-if itest.s "x" -ne "x$calibration" ; then
-setenv bootargs $bootargs ft5x06_ts.calibration=$calibration
-fi
-else
-echo "------ no ft5x06 touch controller";
-fi
+#setenv bootargs $bootargs ft5x06_ts.screenres=$screenres
+#if itest.s "x" -ne "x$calibration" ; then
+#setenv bootargs $bootargs ft5x06_ts.calibration=$calibration
+#fi
+#else
+#echo "------ no ft5x06 touch controller";
+#fi
 
-if i2c probe 0x48 ; then
-if itest.s "xqvga" == "x$panel" ; then
-display="320x240MR@60,if=RGB24";
-else
-display="CLAA-WVGA,if=RGB666";
-fi
+#if i2c probe 0x48 ; then
+#if itest.s "xqvga" == "x$panel" ; then
+#display="320x240MR@60,if=RGB24";
+#else
+#display="CLAA-WVGA,if=RGB666";
+#fi
 setenv bootargs $bootargs video=mxcfb${nextcon}:dev=lcd,$display
 if test "0" -eq $nextcon; then
 setenv fbmem "fbmem=10M";
@@ -67,13 +67,13 @@ else
 echo "------ no 800x480 display";
 fi
 
-while test "4" -ne $nextcon ; do
-setenv bootargs $bootargs video=mxcfb${nextcon}:off ;
-setexpr nextcon $nextcon + 1 ;
-done
+#while test "4" -ne $nextcon ; do
+#setenv bootargs $bootargs video=mxcfb${nextcon}:off ;
+#setexpr nextcon $nextcon + 1 ;
+#done
 
 setenv bootargs $bootargs $fbmem
-setenv bootargs "$bootargs console=ttymxc1,115200 vmalloc=400M consoleblank=0 rootwait"
+setenv bootargs "$bootargs console=ttymxc0,115200 vmalloc=400M consoleblank=0 rootwait"
 
 if itest.s x$bootpart == x ; then
 bootpart=1
