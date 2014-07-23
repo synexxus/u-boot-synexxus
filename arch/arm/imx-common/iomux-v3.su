@@ -1,2 +1,0 @@
-iomux-v3.c:21:6:imx_iomux_v3_setup_pad	8	static
-iomux-v3.c:57:6:imx_iomux_v3_setup_multiple_pads	16	static

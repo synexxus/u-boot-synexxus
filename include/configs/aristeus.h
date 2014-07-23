@@ -183,7 +183,7 @@
 
 #undef CONFIG_CMD_IMLS
 
-#define CONFIG_BOOTDELAY	       1
+#define CONFIG_BOOTDELAY	       0
 
 #define CONFIG_PREBOOT                 ""
 
@@ -208,7 +208,7 @@
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"script=boot.scr\0" \
 	"uimage=uImage\0" \
-	"console=ttymxc1\0" \
+	"console=ttymxc0\0" \
 	"fdt_high=0xffffffff\0" \
 	"initrd_high=0xffffffff\0" \
 	"fdt_file=imx6q-aristeus.dtb\0" \
@@ -217,7 +217,7 @@
 	"ip_dyn=yes\0" \
 	"mmcdev=0\0" \
 	"mmcpart=1\0" \
-	"mmcroot=/dev/mmcblk0p2 rootwait rw\0" \
+	"mmcroot=/dev/mmcblk0p1 rootwait rw\0" \
 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
 		"root=${mmcroot}\0" \
 	"loadbootscript=" \
@@ -279,7 +279,7 @@
 	   "else run netboot; fi"
 #else
 #define CONFIG_EXTRA_ENV_SETTINGS \
-	"console=ttymxc1\0" \
+	"console=ttymxc0\0" \
 	"clearenv=if sf probe || sf probe || sf probe 1 ; then " \
 		"sf erase 0xc0000 0x2000 && " \
 		"echo restored environment to factory default ; fi\0" \

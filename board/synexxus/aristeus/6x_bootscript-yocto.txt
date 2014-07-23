@@ -1,5 +1,5 @@
 # Yocto-specifics
-setenv bootpart 2
+setenv bootpart 1
 setenv bootdir /
 
 setenv bootargs enable_wait_mode=off
@@ -16,7 +16,7 @@ setexpr nextcon $nextcon + 1 ;
 done
 
 setenv bootargs $bootargs $fbmem
-setenv bootargs "$bootargs console=ttymxc0,115200 vmalloc=400M consoleblank=0 rootwait=1"
+setenv bootargs "$bootargs console=ttymxc0,115200 vmalloc=400M consoleblank=0 root=/dev/mmcblk0p1 rootwait"
 
 if itest.s x$bootpart == x ; then
 bootpart=1

@@ -1,2 +1,0 @@
-cmd_fuse.c:17:12:strtou32	24	static
-cmd_fuse.c:43:12:do_fuse	48	static

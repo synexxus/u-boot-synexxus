@@ -1,3 +1,0 @@
-cmd_sata.c:21:5:__sata_initialize	16	static
-cmd_sata.c:58:12:do_sata	24	static
-cmd_sata.c:52:19:sata_get_dev	0	static
