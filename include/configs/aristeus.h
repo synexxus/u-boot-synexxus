@@ -271,9 +271,9 @@
 	"fdt_addr=0x18000000\0" \
 	"boot_fdt=try\0" \
 	"ip_dyn=yes\0" \
-	"mmcdev=1\0" \
+	"mmcdev=0\0" \
 	"mmcpart=1\0" \
-	"mmcroot=/dev/mmcblk0p1 rootwait rw\0" \
+	"mmcroot=/dev/mmcblk${mmcdev}p${mmcpart} rootwait rw\0" \
 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
 		"root=${mmcroot}\0" \
 	"clearenv=if sf probe || sf probe || sf probe 1 ; then " \
