@@ -1,8 +1,10 @@
 /*
  * Copyright (C) 2010-2013 Freescale Semiconductor, Inc.
  * Copyright (C) 2013, Boundary Devices <info@boundarydevices.com>
- *
+ *   Extended by John Reep
  * SPDX-License-Identifier:	GPL-2.0+
+
+
  */
 
 #include <common.h>
@@ -19,6 +21,7 @@
 #include <asm/imx-common/mxc_i2c.h>
 #include <asm/imx-common/sata.h>
 #include <asm/imx-common/boot_mode.h>
+#include <asm/imx-common/video.h>
 #include <mmc.h>
 #include <fsl_esdhc.h>
 #include <micrel.h>
@@ -31,7 +34,13 @@
 #include <i2c.h>
 
 DECLARE_GLOBAL_DATA_PTR;
-#define GP_USB_OTG_PWR	IMX_GPIO_NR(3, 22)
+
+#if defined(CONFIG_ARISTEUS)
+
+#define GP_USB_OTG_PWR	IMX_GPIO_NR(4, 15)		// GPIO4_IO15 OR [KEY_ROW4__USB_OTG_PWR]
+#else
+#define GP_USB_OTG_PWR	IMX_GPIO_NR(3, 22)		// I.MX SOC EIM_D22 is GPIO3_IO22
+#endif
 
 #define UART_PAD_CTRL  (PAD_CTL_PUS_100K_UP |			\
 	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |			\
@@ -64,6 +73,9 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define OUTPUT_40OHM (PAD_CTL_SPEED_MED|PAD_CTL_DSE_40ohm)
 
+/**
+	It appears CONFIG_DDR_MB is linked to DDR_MB=1024 found in boards.cfg in u-boot main
+ */
 int dram_init(void)
 {
 	gd->ram_size = ((ulong)CONFIG_DDR_MB * 1024 * 1024);
@@ -71,19 +83,53 @@ int dram_init(void)
 	return 0;
 }
 
+/*
+	Modified Comment 01/28/2014
+	SABRELITE, Nitrogen6x, and Aristeus all use SD3_DAT6/7 for UART1
+	
+	This efficiently allows the terminal to be used and code reuse
+ */
 iomux_v3_cfg_t const uart1_pads[] = {
 	MX6_PAD_SD3_DAT6__UART1_RX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
 	MX6_PAD_SD3_DAT7__UART1_TX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
 };
 
+/*
+	Modified 01/28/2014 for Aristeus 
+	UART2 is confgiured from the original of the SABRELITE/NITROGEN6X
+ */
 iomux_v3_cfg_t const uart2_pads[] = {
+	// original commented
+	#ifdef CONFIG_ARISTEUS
+	MX6_PAD_GPIO_7__UART2_TX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
+	MX6_PAD_GPIO_8__UART2_RX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
+	#else
 	MX6_PAD_EIM_D26__UART2_TX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
 	MX6_PAD_EIM_D27__UART2_RX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
+	#endif
 };
+
+#ifdef CONFIG_ARISTEUS
+/*
+	Added 01/28/2014 for Aristeus 
+	UART3 is an added UART interface communication port
+ */
+iomux_v3_cfg_t const uart3_pads[] = {
+
+	MX6_PAD_EIM_D24__UART3_TX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
+	MX6_PAD_EIM_D25__UART3_RX_DATA| MUX_PAD_CTRL(UART_PAD_CTRL),
+};
+#endif
 
 #define PC MUX_PAD_CTRL(I2C_PAD_CTRL)
 
-/* I2C1, SGTL5000 */
+/* Modified 01/28/2014 for Aristeus
+   I2C1: 
+		Known Communication Devices:
+		ADV7343 	(configuration required)
+		SMSC2517i 	(No configuration required)
+		LVDS_I2C	(LVDS EEPROM for display configuration [EDID])
+*/
 struct i2c_pads_info i2c_pad_info0 = {
 	.scl = {
 		.i2c_mode = MX6_PAD_EIM_D21__I2C1_SCL | PC,
@@ -97,7 +143,14 @@ struct i2c_pads_info i2c_pad_info0 = {
 	}
 };
 
-/* I2C2 Camera, MIPI */
+/* Modified 01/28/2014 for Aristeus
+   I2C2: 
+		Known Communication Devices:
+		Outboard on COM Express Header
+		PEX8606 PCIe Switch
+		PMIC_I2C (MMPF0100)
+		HDMI_I2C	(HDMI EEPROM for EDID)
+*/
 struct i2c_pads_info i2c_pad_info1 = {
 	.scl = {
 		.i2c_mode = MX6_PAD_KEY_COL3__I2C2_SCL | PC,
@@ -111,7 +164,12 @@ struct i2c_pads_info i2c_pad_info1 = {
 	}
 };
 
-/* I2C3, J15 - RGB connector */
+/* Modified 01/28/2014 for Aristeus
+   I2C2: 
+		Known Communication Devices:
+		Outboard on COM Express Header (SMBus)
+		VGA_I2C		(VGA EEPROM for EDID - needed to P&P configure ADV7343)
+*/
 struct i2c_pads_info i2c_pad_info2 = {
 	.scl = {
 		.i2c_mode = MX6_PAD_GPIO_5__I2C3_SCL | PC,
@@ -125,6 +183,10 @@ struct i2c_pads_info i2c_pad_info2 = {
 	}
 };
 
+/* Modified 01/29/2014
+	SD3 goes out to the COM Express Type 6 Header
+	This can be interfaced to an SD or microSD card slot
+*/
 iomux_v3_cfg_t const usdhc3_pads[] = {
 	MX6_PAD_SD3_CLK__SD3_CLK   | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 	MX6_PAD_SD3_CMD__SD3_CMD   | MUX_PAD_CTRL(USDHC_PAD_CTRL),
@@ -133,8 +195,14 @@ iomux_v3_cfg_t const usdhc3_pads[] = {
 	MX6_PAD_SD3_DAT2__SD3_DATA2 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 	MX6_PAD_SD3_DAT3__SD3_DATA3 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 	MX6_PAD_SD3_DAT5__GPIO7_IO00    | MUX_PAD_CTRL(NO_PAD_CTRL), /* CD */
+	/* Could support WP detection with
+	 MX6_PAD_SD3_DAT4_GPIO7_IO01 | MUX_PAD_CTRL(NO_PAD_CTRL) 
+	*/
 };
 
+/* Modified 01/29/1024
+	SD4 goes to a microSD card slot on the COM Express module
+*/
 iomux_v3_cfg_t const usdhc4_pads[] = {
 	MX6_PAD_SD4_CLK__SD4_CLK   | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 	MX6_PAD_SD4_CMD__SD4_CMD   | MUX_PAD_CTRL(USDHC_PAD_CTRL),
@@ -143,8 +211,35 @@ iomux_v3_cfg_t const usdhc4_pads[] = {
 	MX6_PAD_SD4_DAT2__SD4_DATA2 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 	MX6_PAD_SD4_DAT3__SD4_DATA3 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 	MX6_PAD_NANDF_D6__GPIO2_IO06    | MUX_PAD_CTRL(NO_PAD_CTRL), /* CD */
+	/* Could support WP detection with
+	 MX6_PAD_NANDF_D7_GPIO2_IO07 | MUX_PAD_CTRL(NO_PAD_CTRL) 
+	*/
 };
 
+/* Added SD2 support on Aristeus.  Not supported on SABRELITE or NITROGEN6X
+	SD2 is an onboard microSD slot
+
+	Added: 01/29/2014
+	SD2 is supported on the COM Express through the standard interfaces
+*/
+#ifdef CONFIG_ARISTEUS
+iomux_v3_cfg_t const usdhc2_pads[] = {
+	MX6_PAD_SD2_CLK__SD2_CLK   | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD2_CMD__SD2_CMD   | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD2_DAT0__SD2_DATA0 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD2_DAT1__SD2_DATA1 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD2_DAT2__SD2_DATA2 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD2_DAT3__SD2_DATA3 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_GPIO_4__GPIO1_IO04    | MUX_PAD_CTRL(NO_PAD_CTRL), /* CD */
+	/* Could support WP detection with
+	 MX6_PAD_GPIO_2__GPIO1_IO02 | MUX_PAD_CTRL(NO_PAD_CTRL) 
+	*/
+};
+#endif
+
+/*
+	
+ */
 iomux_v3_cfg_t const enet_pads1[] = {
 	MX6_PAD_ENET_MDIO__ENET_MDIO		| MUX_PAD_CTRL(ENET_PAD_CTRL),
 	MX6_PAD_ENET_MDC__ENET_MDC		| MUX_PAD_CTRL(ENET_PAD_CTRL),
@@ -168,8 +263,19 @@ iomux_v3_cfg_t const enet_pads1[] = {
 	/* pin 33 - 1 - (CLK125_EN) 125Mhz clockout enabled */
 	MX6_PAD_RGMII_RX_CTL__GPIO6_IO24	| MUX_PAD_CTRL(NO_PAD_CTRL),
 	/* pin 42 PHY nRST */
+	#if defined(CONFIG_ARISTEUS)
+	MX6_PAD_ENET_CRS_DV__GPIO1_IO25		| MUX_PAD_CTRL(NO_PAD_CTRL),
+	#define _RGMII_nRST_GP_ 1
+	#define _RGMII_nRST_IO_	25
+	#elif defined(CONFIG_SABRELITE)
 	MX6_PAD_EIM_D23__GPIO3_IO23		| MUX_PAD_CTRL(NO_PAD_CTRL),
+	#define _RGMII_nRST_GP_ 3
+	#define _RGMII_nRST_IO_	23
+	#else
 	MX6_PAD_ENET_RXD0__GPIO1_IO27		| MUX_PAD_CTRL(NO_PAD_CTRL),
+	#define _RGMII_nRST_GP_ 1
+	#define _RGMII_nRST_IO_	27
+	#endif
 };
 
 iomux_v3_cfg_t const enet_pads2[] = {
@@ -181,6 +287,18 @@ iomux_v3_cfg_t const enet_pads2[] = {
 	MX6_PAD_RGMII_RX_CTL__RGMII_RX_CTL	| MUX_PAD_CTRL(ENET_PAD_CTRL),
 };
 
+#if defined(CONFIG_ARISTEUS)
+/* 
+	Moves USB_OTG_ID to ENET_RX_ER pad and USB_H1_OC
+ */
+static iomux_v3_cfg_t const misc_pads[] = {
+	MX6_PAD_ENET_RX_ER__USB_OTG_ID		| MUX_PAD_CTRL(WEAK_PULLUP),
+	MX6_PAD_KEY_COL4__USB_OTG_OC		| MUX_PAD_CTRL(WEAK_PULLUP),
+	MX6_PAD_GPIO_3__USB_H1_OC		| MUX_PAD_CTRL(WEAK_PULLUP),
+	/* OTG Power enable */
+	MX6_PAD_KEY_ROW4__USB_OTG_PWR		| MUX_PAD_CTRL(OUTPUT_40OHM),
+};
+#else
 static iomux_v3_cfg_t const misc_pads[] = {
 	MX6_PAD_GPIO_1__USB_OTG_ID		| MUX_PAD_CTRL(WEAK_PULLUP),
 	MX6_PAD_KEY_COL4__USB_OTG_OC		| MUX_PAD_CTRL(WEAK_PULLUP),
@@ -188,7 +306,15 @@ static iomux_v3_cfg_t const misc_pads[] = {
 	/* OTG Power enable */
 	MX6_PAD_EIM_D22__GPIO3_IO22		| MUX_PAD_CTRL(OUTPUT_40OHM),
 };
+#endif
 
+/**
+	Added Configurations to this to be able to support multiple platforms
+	with one design type
+ */
+#if defined(CONFIG_ARISTEUS)
+// We can override the pads this way
+#else
 /* wl1271 pads on nitrogen6x */
 iomux_v3_cfg_t const wl12xx_pads[] = {
 	(MX6_PAD_NANDF_CS1__GPIO6_IO14 & ~MUX_PAD_CTRL_MASK)
@@ -201,7 +327,27 @@ iomux_v3_cfg_t const wl12xx_pads[] = {
 #define WL12XX_WL_IRQ_GP	IMX_GPIO_NR(6, 14)
 #define WL12XX_WL_ENABLE_GP	IMX_GPIO_NR(6, 15)
 #define WL12XX_BT_ENABLE_GP	IMX_GPIO_NR(6, 16)
+#endif
 
+#if defined(CONFIG_ARISTEUS)
+/* Added on 01/30/2014
+	Aristeus supports the android buttons but in different locations
+ */
+static iomux_v3_cfg_t const button_pads[] = {
+	/* Menu */
+	MX6_PAD_NANDF_D1__GPIO2_IO01	| MUX_PAD_CTRL(BUTTON_PAD_CTRL),
+	/* Back */
+	MX6_PAD_NANDF_D2__GPIO2_IO02	| MUX_PAD_CTRL(BUTTON_PAD_CTRL),
+	/* Labelled Search (mapped to Power under Android) */
+	MX6_PAD_NANDF_D3__GPIO2_IO03	| MUX_PAD_CTRL(BUTTON_PAD_CTRL),
+	/* Home */
+	MX6_PAD_NANDF_D0__GPIO2_IO00	| MUX_PAD_CTRL(BUTTON_PAD_CTRL),
+	/* Volume Down */
+	MX6_PAD_NANDF_RB0__GPIO6_IO10	| MUX_PAD_CTRL(BUTTON_PAD_CTRL),
+	/* Volume Up */
+	MX6_PAD_NANDF_WP_B__GPIO6_IO09	| MUX_PAD_CTRL(BUTTON_PAD_CTRL),
+};
+#else
 /* Button assignments for J14 */
 static iomux_v3_cfg_t const button_pads[] = {
 	/* Menu */
@@ -217,35 +363,61 @@ static iomux_v3_cfg_t const button_pads[] = {
 	/* Volume Up */
 	MX6_PAD_GPIO_18__GPIO7_IO13	| MUX_PAD_CTRL(BUTTON_PAD_CTRL),
 };
+#endif
 
+/*
+	FUNCTION: setup_iomux_enet(void)
+	
+	INPUT: void
+	OUTPUT:
+	DESCRIPTION: initial setup for ENET descriptors and called by board_eth_init() function
+ */
 static void setup_iomux_enet(void)
 {
-	gpio_direction_output(IMX_GPIO_NR(3, 23), 0); /* SABRE Lite PHY rst */
-	gpio_direction_output(IMX_GPIO_NR(1, 27), 0); /* Nitrogen6X PHY rst */
-	gpio_direction_output(IMX_GPIO_NR(6, 30), 1);
-	gpio_direction_output(IMX_GPIO_NR(6, 25), 1);
-	gpio_direction_output(IMX_GPIO_NR(6, 27), 1);
-	gpio_direction_output(IMX_GPIO_NR(6, 28), 1);
-	gpio_direction_output(IMX_GPIO_NR(6, 29), 1);
-	imx_iomux_v3_setup_multiple_pads(enet_pads1, ARRAY_SIZE(enet_pads1));
-	gpio_direction_output(IMX_GPIO_NR(6, 24), 1);
+	imx_iomux_v3_setup_multiple_pads(enet_pads1, ARRAY_SIZE(enet_pads1));	/* sets remainder*/
+	udelay(20);
+	//gpio_direction_output(IMX_GPIO_NR(3, 23), 0); /* SABRE Lite PHY rst */
+	//gpio_direction_output(IMX_GPIO_NR(1, 27), 0); /* Nitrogen6X PHY rst */
+	gpio_direction_output(IMX_GPIO_NR(_RGMII_nRST_GP_, _RGMII_nRST_IO_), 0); 
+	/* Above 1 line: Now it is defined where the IO for nRST is defined! */
+	gpio_direction_output(IMX_GPIO_NR(6, 30), 1);	/* RGMII_RXCLK */
+	gpio_direction_output(IMX_GPIO_NR(6, 25), 1);	/* RGMII_RD0 */
+	gpio_direction_output(IMX_GPIO_NR(6, 27), 1);	/* RGMII_RD1 */
+	gpio_direction_output(IMX_GPIO_NR(6, 28), 1);	/* RGMII_RD2 */
+	gpio_direction_output(IMX_GPIO_NR(6, 29), 1);	/* RGMII_RD3 */
+	gpio_direction_output(IMX_GPIO_NR(6, 24), 1);	/* RGMII_RX_CTL */
 
+puts("setup_iomux_enet: pre 10mS\n");
 	/* Need delay 10ms according to KSZ9021 spec */
 	udelay(1000 * 10);
-	gpio_set_value(IMX_GPIO_NR(3, 23), 1); /* SABRE Lite PHY reset */
-	gpio_set_value(IMX_GPIO_NR(1, 27), 1); /* Nitrogen6X PHY reset */
+puts("setup_iomux_enet: post 10mS\n");
+	gpio_set_value(IMX_GPIO_NR(_RGMII_nRST_GP_, _RGMII_nRST_IO_), 1);	/* Remove from Reset */
+	//gpio_set_value(IMX_GPIO_NR(3, 23), 1); /* SABRE Lite PHY reset */
+	//gpio_set_value(IMX_GPIO_NR(1, 27), 1); /* Nitrogen6X PHY reset */
 
+	/* Configure for RGMII*/
 	imx_iomux_v3_setup_multiple_pads(enet_pads2, ARRAY_SIZE(enet_pads2));
+puts("setup_iomux_enet: return\n");
 }
 
+/*
+	Goes to USB HUB RESET_B -- Managed to keep them the same
+	
+ */
 iomux_v3_cfg_t const usb_pads[] = {
 	MX6_PAD_GPIO_17__GPIO7_IO12 | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
+/* Updated on 01/30/2014*/
 static void setup_iomux_uart(void)
 {
 	imx_iomux_v3_setup_multiple_pads(uart1_pads, ARRAY_SIZE(uart1_pads));
 	imx_iomux_v3_setup_multiple_pads(uart2_pads, ARRAY_SIZE(uart2_pads));
+
+	#ifdef CONFIG_ARISTEUS
+	imx_iomux_v3_setup_multiple_pads(uart3_pads, ARRAY_SIZE(uart3_pads));
+	// Consider a downstream flag for UART3 or just use CONFIG_ARISTEUS?
+	#endif
 }
 
 #ifdef CONFIG_USB_EHCI_MX6
@@ -268,15 +440,46 @@ int board_ehci_power(int port, int on)
 	gpio_set_value(GP_USB_OTG_PWR, on);
 	return 0;
 }
-
 #endif
 
 #ifdef CONFIG_FSL_ESDHC
+#if defined(CONFIG_ARISTEUS)
+struct fsl_esdhc_cfg usdhc_cfg[3] = {
+	{USDHC3_BASE_ADDR},
+	{USDHC4_BASE_ADDR},
+	{USDHC2_BASE_ADDR},
+};
+#else
 struct fsl_esdhc_cfg usdhc_cfg[2] = {
 	{USDHC3_BASE_ADDR},
 	{USDHC4_BASE_ADDR},
 };
+#endif
 
+#if defined(CONFIG_ARISTEUS)
+int board_mmc_getcd(struct mmc *mmc)
+{
+	struct fsl_esdhc_cfg *cfg = (struct fsl_esdhc_cfg *)mmc->priv;
+	int ret = 0;
+
+	switch(cfg->esdhc_base){
+		case USDHC3_BASE_ADDR:
+			gpio_direction_input(IMX_GPIO_NR(7, 0));
+			ret = !gpio_get_value(IMX_GPIO_NR(7, 0));
+			break;
+		case USDHC4_BASE_ADDR:
+			gpio_direction_input(IMX_GPIO_NR(2, 6));
+			ret = !gpio_get_value(IMX_GPIO_NR(2, 6));
+			break;
+		case USDHC2_BASE_ADDR:
+			// This is also the actual SD2_CD_B signal group! (ALT6)
+			gpio_direction_input(IMX_GPIO_NR(1, 4));
+			ret = !gpio_get_value(IMX_GPIO_NR(1, 4));
+			break;
+	}
+	return ret;
+}
+#else
 int board_mmc_getcd(struct mmc *mmc)
 {
 	struct fsl_esdhc_cfg *cfg = (struct fsl_esdhc_cfg *)mmc->priv;
@@ -292,17 +495,28 @@ int board_mmc_getcd(struct mmc *mmc)
 
 	return ret;
 }
+#endif
 
 int board_mmc_init(bd_t *bis)
 {
 	s32 status = 0;
 	u32 index = 0;
 
+	#if defined(CONFIG_ARISTEUS)
+	usdhc_cfg[0].sdhc_clk = mxc_get_clock(MXC_ESDHC3_CLK);
+	usdhc_cfg[1].sdhc_clk = mxc_get_clock(MXC_ESDHC4_CLK);
+	usdhc_cfg[2].sdhc_clk = mxc_get_clock(MXC_ESDHC2_CLK);
+
+	usdhc_cfg[0].max_bus_width = 4;
+	usdhc_cfg[1].max_bus_width = 4;
+	usdhc_cfg[2].max_bus_width = 4;
+	#else
 	usdhc_cfg[0].sdhc_clk = mxc_get_clock(MXC_ESDHC3_CLK);
 	usdhc_cfg[1].sdhc_clk = mxc_get_clock(MXC_ESDHC4_CLK);
 
 	usdhc_cfg[0].max_bus_width = 4;
 	usdhc_cfg[1].max_bus_width = 4;
+	#endif
 
 	for (index = 0; index < CONFIG_SYS_FSL_USDHC_NUM; ++index) {
 		switch (index) {
@@ -314,6 +528,12 @@ int board_mmc_init(bd_t *bis)
 		       imx_iomux_v3_setup_multiple_pads(
 			       usdhc4_pads, ARRAY_SIZE(usdhc4_pads));
 		       break;
+		#if defined(CONFIG_ARISTEUS)
+		case 2:
+		       imx_iomux_v3_setup_multiple_pads(
+			       usdhc2_pads, ARRAY_SIZE(usdhc2_pads));
+			break;
+		#endif
 		default:
 		       printf("Warning: you configured more USDHC controllers"
 			       "(%d) then supported by the board (%d)\n",
@@ -331,21 +551,71 @@ int board_mmc_init(bd_t *bis)
 #ifdef CONFIG_MXC_SPI
 iomux_v3_cfg_t const ecspi1_pads[] = {
 	/* SS1 */
+	// why not? EIM_D19__ECSPI1_SS1
 	MX6_PAD_EIM_D19__GPIO3_IO19   | MUX_PAD_CTRL(SPI_PAD_CTRL),
 	MX6_PAD_EIM_D17__ECSPI1_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),
 	MX6_PAD_EIM_D18__ECSPI1_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL),
 	MX6_PAD_EIM_D16__ECSPI1_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),
+	/* SS0 */
+	MX6_PAD_EIM_EB2__GPIO2_IO30 | MUX_PAD_CTRL(SPI_PAD_CTRL),
+	
 };
+
+#if defined(CONFIG_ARISTEUS)
+iomux_v3_cfg_t const ecspi2_pads[] = {
+	/* SS0 */
+	MX6_PAD_EIM_RW__GPIO2_IO26   | MUX_PAD_CTRL(SPI_PAD_CTRL),
+	MX6_PAD_EIM_OE__ECSPI2_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),
+	MX6_PAD_EIM_CS1__ECSPI2_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL),
+	MX6_PAD_EIM_CS0__ECSPI2_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),
+};
+#endif
 
 void setup_spi(void)
 {
 	imx_iomux_v3_setup_multiple_pads(ecspi1_pads,
 					 ARRAY_SIZE(ecspi1_pads));
+
+#if defined(CONFIG_ARISTEUS)
+	imx_iomux_v3_setup_multiple_pads(ecspi2_pads,
+					 ARRAY_SIZE(ecspi2_pads));
+#endif	
 }
 #endif
 
 int board_phy_config(struct phy_device *phydev)
 {
+#if defined(CONFIG_ARISTEUS)
+	/* min rx data delay */
+	//ksz9031_phy_extended_write(phydev,
+	//		MII_KSZ9031_EXT_RGMII_RX_DATA_SKEW, 0x0);
+	/* min tx data delay */
+	//ksz9031_phy_extended_write(phydev,
+	//		MII_KSZ9031_EXT_RGMII_TX_DATA_SKEW, 0x0);
+	/* max rx/tx clock delay, min rx/tx control */
+	//ksz9031_phy_extended_write(phydev,
+	//		MII_KSZ9031_EXT_RGMII_CLOCK_SKEW, 0xf0f0);
+
+	phy_write(phydev, MDIO_DEVAD_NONE, MII_CTRL1000, 0x1c00);
+
+	/* control data pad skew - devaddr = 0x02, register = 0x04 */
+	ksz9031_phy_extended_write(phydev, 0x02,
+				   MII_KSZ9031_EXT_RGMII_CTRL_SIG_SKEW,
+				   MII_KSZ9031_MOD_DATA_NO_POST_INC, 0x0000);
+	/* rx data pad skew - devaddr = 0x02, register = 0x05 */
+	ksz9031_phy_extended_write(phydev, 0x02,
+				   MII_KSZ9031_EXT_RGMII_RX_DATA_SKEW,
+				   MII_KSZ9031_MOD_DATA_NO_POST_INC, 0x0000);
+	/* tx data pad skew - devaddr = 0x02, register = 0x05 */
+	ksz9031_phy_extended_write(phydev, 0x02,
+				   MII_KSZ9031_EXT_RGMII_TX_DATA_SKEW,
+				   MII_KSZ9031_MOD_DATA_NO_POST_INC, 0x0000);
+	/* gtx and rx clock pad skew - devaddr = 0x02, register = 0x08 */
+	ksz9031_phy_extended_write(phydev, 0x02,
+				   MII_KSZ9031_EXT_RGMII_CLOCK_SKEW,
+				   MII_KSZ9031_MOD_DATA_NO_POST_INC, 0x03FF);
+
+#else
 	/* min rx data delay */
 	ksz9021_phy_extended_write(phydev,
 			MII_KSZ9021_EXT_RGMII_RX_DATA_SKEW, 0x0);
@@ -355,22 +625,29 @@ int board_phy_config(struct phy_device *phydev)
 	/* max rx/tx clock delay, min rx/tx control */
 	ksz9021_phy_extended_write(phydev,
 			MII_KSZ9021_EXT_RGMII_CLOCK_SKEW, 0xf0f0);
+#endif
 	if (phydev->drv->config)
 		phydev->drv->config(phydev);
-
 	return 0;
 }
 
+/*
+	Modified to this point!
+ */
 int board_eth_init(bd_t *bis)
 {
+
+#if defined(CONFIG_FEC_MXC)
 	uint32_t base = IMX_FEC_BASE;
 	struct mii_dev *bus = NULL;
 	struct phy_device *phydev = NULL;
 	int ret;
+#endif
 
 	setup_iomux_enet();
-
+puts("Board eth init called\n");
 #ifdef CONFIG_FEC_MXC
+puts("fec get miibus\n");
 	bus = fec_get_miibus(base, -1);
 	if (!bus)
 		return 0;
@@ -387,6 +664,7 @@ int board_eth_init(bd_t *bis)
 		free(phydev);
 		free(bus);
 	}
+puts("Ethernet Init Done\n");
 #endif
 
 #ifdef CONFIG_MV_UDC
@@ -405,6 +683,23 @@ static void setup_buttons(void)
 #if defined(CONFIG_VIDEO_IPUV3)
 
 static iomux_v3_cfg_t const backlight_pads[] = {
+#if defined(CONFIG_ARISTEUS)
+	/* Backlight PWM for LVDS_BKLT_CTRL*/
+	//MX6_PAD_SD1_DAT3__PWM1_OUT
+	MX6_PAD_SD1_DAT3__GPIO1_IO21 | MUX_PAD_CTRL(NO_PAD_CTRL),
+#define LVDS_BACKLIGHT_GP IMX_GPIO_NR(1, 21)
+#define RGB_BACKLIGHT_GP IMX_GPIO_NR(1, 21)		// There is no actual RGB but configure for backwards compatibility performance [can be the same as LVDS just for repurpose]
+
+	/* LVDS Backlight Enable Signal to the COM Express header */
+	MX6_PAD_NANDF_CS3__GPIO6_IO16 | MUX_PAD_CTRL(NO_PAD_CTRL),
+#define LVDS_BACKLIGHT_EN IMX_GPIO_NR(6,16)
+
+	/* LVDS Panel Enable Power signal*/
+	MX6_PAD_NANDF_CS1__GPIO6_IO14 | MUX_PAD_CTRL(NO_PAD_CTRL),
+#define LVDS_PANEL_EN	IMX_GPIO_NR(6,14)
+
+
+#else
 	/* Backlight on RGB connector: J15 */
 	MX6_PAD_SD1_DAT3__GPIO1_IO21 | MUX_PAD_CTRL(NO_PAD_CTRL),
 #define RGB_BACKLIGHT_GP IMX_GPIO_NR(1, 21)
@@ -412,6 +707,7 @@ static iomux_v3_cfg_t const backlight_pads[] = {
 	/* Backlight on LVDS connector: J6 */
 	MX6_PAD_SD1_CMD__GPIO1_IO18 | MUX_PAD_CTRL(NO_PAD_CTRL),
 #define LVDS_BACKLIGHT_GP IMX_GPIO_NR(1, 18)
+#endif
 };
 
 static iomux_v3_cfg_t const rgb_pads[] = {
@@ -446,6 +742,7 @@ static iomux_v3_cfg_t const rgb_pads[] = {
 	MX6_PAD_DISP0_DAT23__IPU1_DISP0_DATA23,
 };
 
+/*
 struct display_info_t {
 	int	bus;
 	int	addr;
@@ -454,13 +751,15 @@ struct display_info_t {
 	void	(*enable)(struct display_info_t const *dev);
 	struct	fb_videomode mode;
 };
+*/
 
-
+/*
 static int detect_hdmi(struct display_info_t const *dev)
 {
 	struct hdmi_regs *hdmi	= (struct hdmi_regs *)HDMI_ARB_BASE_ADDR;
 	return readb(&hdmi->phy_stat0) & HDMI_DVI_STAT;
 }
+*/
 
 static void do_enable_hdmi(struct display_info_t const *dev)
 {
@@ -490,9 +789,11 @@ static void enable_rgb(struct display_info_t const *dev)
 		rgb_pads,
 		 ARRAY_SIZE(rgb_pads));
 	gpio_direction_output(RGB_BACKLIGHT_GP, 1);
+	/* RGB pads on the Aristeus go to a programmable ADV7343 which requires I2C programming */
 }
 
-static struct display_info_t const displays[] = {{
+
+struct display_info_t const displays[] = {{
 	.bus	= -1,
 	.addr	= 0,
 	.pixfmt	= IPU_PIX_FMT_RGB24,
@@ -573,7 +874,10 @@ static struct display_info_t const displays[] = {{
 		.sync           = 0,
 		.vmode          = FB_VMODE_NONINTERLACED
 } } };
+size_t display_count = ARRAY_SIZE(displays);
 
+/* Updated U boot 06/27/2014 to add board_video_skip*/
+/*
 int board_video_skip(void)
 {
 	int i;
@@ -618,6 +922,7 @@ int board_video_skip(void)
 	}
 	return (0 != ret);
 }
+*/
 
 static void setup_display(void)
 {
@@ -679,6 +984,10 @@ int board_early_init_f(void)
 {
 	setup_iomux_uart();
 
+#if defined(CONFIG_ARISTEUS)
+	/* Early board init functions for Aristeus?*/
+puts("Early Board Init Called\n");
+#else
 	/* Disable wl1271 For Nitrogen6w */
 	gpio_direction_input(WL12XX_WL_IRQ_GP);
 	gpio_direction_output(WL12XX_WL_ENABLE_GP, 0);
@@ -686,6 +995,8 @@ int board_early_init_f(void)
 	gpio_direction_output(GP_USB_OTG_PWR, 0); /* OTG power off */
 
 	imx_iomux_v3_setup_multiple_pads(wl12xx_pads, ARRAY_SIZE(wl12xx_pads));
+#endif
+
 	setup_buttons();
 
 #if defined(CONFIG_VIDEO_IPUV3)
@@ -728,16 +1039,33 @@ int board_init(void)
 	setup_sata();
 #endif
 
+#if defined(CONFIG_VIDEO_IPUV3)
+puts("Setup Display\n");
+	setup_display();
+#endif
+puts("Board Init Called\n");
 	return 0;
 }
 
+/**
+ *	Function: checkboard()
+ *
+ *	Inputs: void
+ *	outputs: int
+ *	Description: 
+ *	  U-Boot Configuration defined function through CONFIG_DISPLAY_BOARDINFO
+ *
+ */
 int checkboard(void)
 {
+#if defined(CONFIG_ARISTEUS)
+	puts("Board: Aristeus\n");
+#else
 	if (gpio_get_value(WL12XX_WL_IRQ_GP))
 		puts("Board: Nitrogen6X\n");
 	else
 		puts("Board: SABRE Lite\n");
-
+#endif
 	return 0;
 }
 
@@ -747,13 +1075,23 @@ struct button_key {
 	char		ident;
 };
 
+/* Updated for Aristeus Keys as well*/
 static struct button_key const buttons[] = {
+#if defined(CONFIG_ARISTEUS)
+	{"back",	IMX_GPIO_NR(2, 2),	'B'},
+	{"home",	IMX_GPIO_NR(2, 0),	'H'},
+	{"menu",	IMX_GPIO_NR(2, 1),	'M'},
+	{"search",	IMX_GPIO_NR(2, 3),	'S'},
+	{"volup",	IMX_GPIO_NR(6, 9),	'V'},
+	{"voldown",	IMX_GPIO_NR(6, 10),	'v'},
+#else
 	{"back",	IMX_GPIO_NR(2, 2),	'B'},
 	{"home",	IMX_GPIO_NR(2, 4),	'H'},
 	{"menu",	IMX_GPIO_NR(2, 1),	'M'},
 	{"search",	IMX_GPIO_NR(2, 3),	'S'},
 	{"volup",	IMX_GPIO_NR(7, 13),	'V'},
 	{"voldown",	IMX_GPIO_NR(4, 5),	'v'},
+#endif
 };
 
 /*
@@ -826,10 +1164,19 @@ static void preboot_keys(void)
 
 #ifdef CONFIG_CMD_BMODE
 static const struct boot_mode board_boot_modes[] = {
+#if defined(CONFIG_ARISTEUS)
+	/* 4 bit bus width */
+	/* ordered as CFG1[7:0], CFG2[7:0], CFG3[7:0], CFG4[7:0]*/
+	{"mmc0",	MAKE_CFGVAL(0x40, 0x30, 0x00, 0x00)},	//SD3
+	{"mmc1",	MAKE_CFGVAL(0x40, 0x38, 0x00, 0x00)},	//SD4
+	{"mmc2",	MAKE_CFGVAL(0x40, 0x28, 0x00, 0x00)},	//SD2
+	{NULL,		0},
+#else
 	/* 4 bit bus width */
 	{"mmc0",	MAKE_CFGVAL(0x40, 0x30, 0x00, 0x00)},
 	{"mmc1",	MAKE_CFGVAL(0x40, 0x38, 0x00, 0x00)},
 	{NULL,		0},
+#endif
 };
 #endif
 

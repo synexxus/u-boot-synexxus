@@ -16,7 +16,7 @@ setexpr nextcon $nextcon + 1 ;
 done
 
 setenv bootargs $bootargs $fbmem
-setenv bootargs "$bootargs console=ttymxc0,115200 vmalloc=400M consoleblank=0 root=/dev/mmcblk0p1 rootwait"
+setenv bootargs "$bootargs console=ttymxc0,115200 vmalloc=400M consoleblank=0 rootwait"
 
 if itest.s x$bootpart == x ; then
 bootpart=1

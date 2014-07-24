@@ -50,12 +50,7 @@
 
 //JREEP ARISTEUS changed MXC_UART_BASE to UART1_BASE
 #define CONFIG_MXC_UART
-#if defined(CONFIG_ARISTEUS)
 #define CONFIG_MXC_UART_BASE	       UART1_BASE
-
-#else
-#define CONFIG_MXC_UART_BASE		UART2_BASE
-#endif
 #define CONFIG_CONSOLE_DEV		"ttymxc0"
 #define CONFIG_DEFAULT_FDT_FILE	"imx6q-aristeus.dtb"
 
@@ -82,13 +77,7 @@
 #define CONFIG_FSL_ESDHC
 #define CONFIG_FSL_USDHC
 #define CONFIG_SYS_FSL_ESDHC_ADDR      0
-
-#if defined(CONFIG_ARISTEUS)
-
 #define CONFIG_SYS_FSL_USDHC_NUM       3	//JREEP ARISTEUS
-#else
-#define CONFIG_SYS_FSL_USDHC_NUM       2
-#endif
 
 #define CONFIG_MMC
 #define CONFIG_CMD_MMC
@@ -129,13 +118,7 @@
 #define CONFIG_FEC_MXC_PHYADDR		-1
 #define CONFIG_PHYLIB
 #define CONFIG_PHY_MICREL
-
-
-#if defined(CONFIG_ARISTEUS)
 #define CONFIG_PHY_MICREL_KSZ9031
-#else
-#define CONFIG_PHY_MIRSEL_KSZ9021
-#endif
 
 /* USB Configs */
 #define CONFIG_CMD_USB
@@ -204,11 +187,11 @@
 
 #define CONFIG_DRIVE_TYPES CONFIG_DRIVE_SATA CONFIG_DRIVE_MMC
 
-#if defined(CONFIG_ARISTEUS)
+#if defined(CONFIG_SABRELITE)
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"script=boot.scr\0" \
 	"uimage=uImage\0" \
-	"console=ttymxc0\0" \
+	"console=ttymxc1\0" \
 	"fdt_high=0xffffffff\0" \
 	"initrd_high=0xffffffff\0" \
 	"fdt_file=imx6q-aristeus.dtb\0" \
@@ -217,7 +200,7 @@
 	"ip_dyn=yes\0" \
 	"mmcdev=0\0" \
 	"mmcpart=1\0" \
-	"mmcroot=/dev/mmcblk0p1 rootwait rw\0" \
+	"mmcroot=/dev/mmcblk0p2 rootwait rw\0" \
 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
 		"root=${mmcroot}\0" \
 	"loadbootscript=" \
@@ -280,6 +263,19 @@
 #else
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"console=ttymxc0\0" \
+	"script=boot.scr\0" \
+	"uimage=uImage\0" \
+	"fdt_high=0xffffffff\0" \
+	"initrd_high=0xffffffff\0" \
+	"fdt_file=imx6q-aristeus.dtb\0" \
+	"fdt_addr=0x18000000\0" \
+	"boot_fdt=try\0" \
+	"ip_dyn=yes\0" \
+	"mmcdev=1\0" \
+	"mmcpart=1\0" \
+	"mmcroot=/dev/mmcblk0p1 rootwait rw\0" \
+	"mmcargs=setenv bootargs console=${console},${baudrate} " \
+		"root=${mmcroot}\0" \
 	"clearenv=if sf probe || sf probe || sf probe 1 ; then " \
 		"sf erase 0xc0000 0x2000 && " \
 		"echo restored environment to factory default ; fi\0" \
@@ -289,28 +285,104 @@
 				"for fs in fat ext2 ; do " \
 					"${fs}load " \
 						"${dtype} ${disk}:1 " \
-						"10800000 " \
+						"10008000 " \
 						"/6x_bootscript" \
-						"&& source 10800000 ; " \
+						"&& source 10008000 ; " \
 				"done ; " \
 			"done ; " \
 		"done; " \
 		"setenv stdout serial,vga ; " \
 		"echo ; echo 6x_bootscript not found ; " \
 		"echo ; echo serial console at 115200, 8N1 ; echo ; " \
+		"echo Visit us at http://www.synexxus.com/" \
 		"setenv stdout serial\0" \
 	"upgradeu=for dtype in " CONFIG_DRIVE_TYPES \
 		"; do " \
 		"for disk in 0 1 ; do ${dtype} dev ${disk} ;" \
 		     "for fs in fat ext2 ; do " \
-				"${fs}load ${dtype} ${disk}:1 10800000 " \
+				"${fs}load ${dtype} ${disk}:1 10008000 " \
 					"/6x_upgrade " \
-					"&& source 10800000 ; " \
+					"&& source 10008000 ; " \
 			"done ; " \
 		"done ; " \
 	"done\0" \
 
 #endif
+/*
+#define CONFIG_EXTRA_ENV_SETTINGS \
+	"script=boot.scr\0" \
+	"uimage=uImage\0" \
+	"console=ttymxc0\0" \
+	"fdt_high=0xffffffff\0" \
+	"initrd_high=0xffffffff\0" \
+	"fdt_file=imx6q-aristeus.dtb\0" \
+	"fdt_addr=0x18000000\0" \
+	"boot_fdt=try\0" \
+	"ip_dyn=yes\0" \
+	"mmcdev=1\0" \
+	"mmcpart=1\0" \
+	"mmcroot=/dev/mmcblk0p1 rootwait rw\0" \
+	"mmcargs=setenv bootargs console=${console},${baudrate} " \
+		"root=${mmcroot}\0" \
+	"loadbootscript=" \
+		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
+	"bootscript=echo Running bootscript from mmc ...; " \
+		"source\0" \
+	"loaduimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${uimage}\0" \
+	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
+	"mmcboot=echo Booting from mmc ...; " \
+		"run mmcargs; " \
+		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
+			"if run loadfdt; then " \
+				"bootm ${loadaddr} - ${fdt_addr}; " \
+			"else " \
+				"if test ${boot_fdt} = try; then " \
+					"bootm; " \
+				"else " \
+					"echo WARN: Cannot load the DT; " \
+				"fi; " \
+			"fi; " \
+		"else " \
+			"bootm; " \
+		"fi;\0" \
+	"netargs=setenv bootargs console=${console},${baudrate} " \
+		"root=/dev/nfs " \
+	"ip=dhcp nfsroot=${serverip}:${nfsroot},v3,tcp\0" \
+		"netboot=echo Booting from net ...; " \
+		"run netargs; " \
+		"if test ${ip_dyn} = yes; then " \
+			"setenv get_cmd dhcp; " \
+		"else " \
+			"setenv get_cmd tftp; " \
+		"fi; " \
+		"${get_cmd} ${uimage}; " \
+		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
+			"if ${get_cmd} ${fdt_addr} ${fdt_file}; then " \
+				"bootm ${loadaddr} - ${fdt_addr}; " \
+			"else " \
+				"if test ${boot_fdt} = try; then " \
+					"bootm; " \
+				"else " \
+					"echo WARN: Cannot load the DT; " \
+				"fi; " \
+			"fi; " \
+		"else " \
+			"bootm; " \
+		"fi;\0"
+
+#define CONFIG_BOOTCOMMAND \
+	   "mmc dev ${mmcdev}; if mmc rescan; then " \
+		   "if run loadbootscript; then " \
+			   "run bootscript; " \
+		   "else " \
+			   "if run loaduimage; then " \
+				   "run mmcboot; " \
+			   "else run netboot; " \
+			   "fi; " \
+		   "fi; " \
+	   "else run netboot; fi"
+*/
+
 /* Miscellaneous configurable options */
 #define CONFIG_SYS_LONGHELP
 #define CONFIG_SYS_HUSH_PARSER
