@@ -1,5 +1,5 @@
 # Yocto-specifics
-setenv bootpart 1
+setenv bootpart 2
 setenv bootdir /
 
 setenv bootargs enable_wait_mode=off

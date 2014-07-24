@@ -263,19 +263,6 @@
 #else
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"console=ttymxc0\0" \
-	"script=boot.scr\0" \
-	"uimage=uImage\0" \
-	"fdt_high=0xffffffff\0" \
-	"initrd_high=0xffffffff\0" \
-	"fdt_file=imx6q-aristeus.dtb\0" \
-	"fdt_addr=0x18000000\0" \
-	"boot_fdt=try\0" \
-	"ip_dyn=yes\0" \
-	"mmcdev=0\0" \
-	"mmcpart=1\0" \
-	"mmcroot=/dev/mmcblk${mmcdev}p${mmcpart} rootwait rw\0" \
-	"mmcargs=setenv bootargs console=${console},${baudrate} " \
-		"root=${mmcroot}\0" \
 	"clearenv=if sf probe || sf probe || sf probe 1 ; then " \
 		"sf erase 0xc0000 0x2000 && " \
 		"echo restored environment to factory default ; fi\0" \
@@ -294,7 +281,7 @@
 		"setenv stdout serial,vga ; " \
 		"echo ; echo 6x_bootscript not found ; " \
 		"echo ; echo serial console at 115200, 8N1 ; echo ; " \
-		"echo Visit us at http://www.synexxus.com/" \
+		"echo details at http://boundarydevices.com/6q_bootscript ; " \
 		"setenv stdout serial\0" \
 	"upgradeu=for dtype in " CONFIG_DRIVE_TYPES \
 		"; do " \
