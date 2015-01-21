@@ -10,6 +10,7 @@
  */
 
 #include "mkimage.h"
+#include <bootm.h>
 #include <image.h>
 #include <version.h>
 
@@ -609,11 +610,13 @@ static int fit_config_process_sig(const char *keydir, void *keydest,
 	/* Write the public key into the supplied FDT file */
 	if (keydest) {
 		ret = info.algo->add_verify_data(&info, keydest);
+		if (ret == -ENOSPC)
+			return -ENOSPC;
 		if (ret) {
 			printf("Failed to add verification data for '%s' signature node in '%s' image node\n",
 			       node_name, conf_name);
-			return ret == FDT_ERR_NOSPACE ? -ENOSPC : -EIO;
 		}
+		return ret;
 	}
 
 	return 0;
@@ -705,16 +708,21 @@ int fit_add_verification_data(const char *keydir, void *keydest, void *fit,
 }
 
 #ifdef CONFIG_FIT_SIGNATURE
-int fit_check_sign(const void *working_fdt, const void *key)
+int fit_check_sign(const void *fit, const void *key)
 {
 	int cfg_noffset;
 	int ret;
 
-	cfg_noffset = fit_conf_get_node(working_fdt, NULL);
+	cfg_noffset = fit_conf_get_node(fit, NULL);
 	if (!cfg_noffset)
 		return -1;
 
-	ret = fit_config_verify(working_fdt, cfg_noffset);
+	printf("Verifying Hash Integrity ... ");
+	ret = fit_config_verify(fit, cfg_noffset);
+	if (ret)
+		return ret;
+	ret = bootm_host_load_images(fit, cfg_noffset);
+
 	return ret;
 }
 #endif

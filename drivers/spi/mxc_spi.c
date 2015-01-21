@@ -159,12 +159,6 @@ static s32 spi_cfg_mxc(struct mxc_spi_slave *mxcs, unsigned int cs,
 	reg_ctrl = (reg_ctrl & ~MXC_CSPICTRL_POSTDIV(0x0F)) |
 		MXC_CSPICTRL_POSTDIV(post_div);
 
-	/* We need to disable SPI before changing registers */
-#ifndef CONFIG_CSPICTRL_EN_DISABLED
-#warning: reg_ctrl active
-	reg_ctrl &= ~MXC_CSPICTRL_EN;
-#endif
-
 	if (mode & SPI_CS_HIGH)
 		ss_pol = 1;
 

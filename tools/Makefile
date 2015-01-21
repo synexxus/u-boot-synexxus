@@ -66,8 +66,10 @@ RSA_OBJS-$(CONFIG_FIT_SIGNATURE) := $(addprefix lib/rsa/, \
 dumpimage-mkimage-objs := aisimage.o \
 			atmelimage.o \
 			$(FIT_SIG_OBJS-y) \
+			common/bootm.o \
 			lib/crc32.o \
 			default_image.o \
+			lib/fdtdec_common.o \
 			lib/fdtdec.o \
 			fit_common.o \
 			fit_image.o \
@@ -191,7 +193,6 @@ endif # !LOGO_BMP
 # Define _GNU_SOURCE to obtain the getline prototype from stdio.h
 #
 HOST_EXTRACFLAGS += -include $(srctree)/include/libfdt_env.h \
-		-include $(srctree)/include/sha256.h \
 		$(patsubst -I%,-idirafter%, $(UBOOTINCLUDE)) \
 		-I$(srctree)/lib/libfdt \
 		-I$(srctree)/tools \

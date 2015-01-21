@@ -8,7 +8,7 @@
 VERSION = 2014
 PATCHLEVEL = 07
 SUBLEVEL =
-EXTRAVERSION = -rc3
+EXTRAVERSION =
 NAME =
 
 # *DOCUMENTATION*
@@ -244,18 +244,18 @@ endif
 KBUILD_MODULES :=
 KBUILD_BUILTIN := 1
 
-#	If we have only "make modules", don't compile built-in objects.
-#	When we're building modules with modversions, we need to consider
-#	the built-in objects during the descend as well, in order to
-#	make sure the checksums are up to date before we record them.
+# If we have only "make modules", don't compile built-in objects.
+# When we're building modules with modversions, we need to consider
+# the built-in objects during the descend as well, in order to
+# make sure the checksums are up to date before we record them.
 
 ifeq ($(MAKECMDGOALS),modules)
   KBUILD_BUILTIN := $(if $(CONFIG_MODVERSIONS),1)
 endif
 
-#	If we have "make <whatever> modules", compile modules
-#	in addition to whatever we do anyway.
-#	Just "make" or "make all" shall build modules as well
+# If we have "make <whatever> modules", compile modules
+# in addition to whatever we do anyway.
+# Just "make" or "make all" shall build modules as well
 
 # U-Boot does not need modules
 #ifneq ($(filter all _all modules,$(MAKECMDGOALS)),)
@@ -788,7 +788,8 @@ OBJCOPYFLAGS_u-boot.bin := -O binary
 binary_size_check: u-boot.bin System.map FORCE
 	@file_size=`stat -c %s u-boot.bin` ; \
 	map_size=$(shell cat System.map | \
-		awk '/_image_copy_start/ {start = $$1} /_image_binary_end/ {end = $$1} END {if (start != "" && end != "") print strtonum("0x" end) - strtonum("0x" start)}'); \
+		awk '/_image_copy_start/ {start = $$1} /_image_binary_end/ {end = $$1} END {if (start != "" && end != "") print "ibase=16; " toupper(end) " - " toupper(start)}' \
+		| bc); \
 	if [ "" != "$$map_size" ]; then \
 		if test $$map_size -ne $$file_size; then \
 			echo "System.map shows a binary size of $$map_size" >&2 ; \
@@ -832,7 +833,7 @@ MKIMAGEFLAGS_u-boot.kwb = -n $(srctree)/$(CONFIG_SYS_KWD_CONFIG:"%"=%) \
 MKIMAGEFLAGS_u-boot.pbl = -n $(srctree)/$(CONFIG_SYS_FSL_PBL_RCW:"%"=%) \
 		-R $(srctree)/$(CONFIG_SYS_FSL_PBL_PBI:"%"=%) -T pblimage
 
-u-boot.img u-boot.kwb u-boot.pbl: u-boot$(if $(CONFIG_OF_SEPARATE),-dtb,).bin FORCE
+u-boot.img u-boot.kwb u-boot.pbl: u-boot.bin FORCE
 	$(call if_changed,mkimage)
 
 MKIMAGEFLAGS_u-boot-dtb.img = $(MKIMAGEFLAGS_u-boot.img)
@@ -1219,7 +1220,7 @@ CLOBBER_FILES += u-boot* MLO* SPL System.map
 
 # Directories & files removed with 'make mrproper'
 MRPROPER_DIRS  += include/config include/generated          \
-                  .tmp_objdiff
+		  .tmp_objdiff
 MRPROPER_FILES += .config .config.old \
 		  tags TAGS cscope* GPATH GTAGS GRTAGS GSYMS \
 		  include/config.h include/config.mk
@@ -1273,7 +1274,7 @@ $(mrproper-dirs):
 mrproper: clobber $(mrproper-dirs)
 	$(call cmd,rmdirs)
 	$(call cmd,rmfiles)
-	@rm -f arch/*/include/asm/arch arch/*/include/asm/proc
+	@rm -f arch/*/include/asm/arch
 
 # distclean
 #

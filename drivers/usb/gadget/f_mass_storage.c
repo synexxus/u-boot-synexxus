@@ -1110,6 +1110,7 @@ static int do_inquiry(struct fsg_common *common, struct fsg_buffhd *bh)
 
 	memset(buf, 0, 8);
 	buf[0] = TYPE_DISK;
+	buf[1] = curlun->removable ? 0x80 : 0;
 	buf[2] = 2;		/* ANSI SCSI level 2 */
 	buf[3] = 2;		/* SCSI-2 INQUIRY data format */
 	buf[4] = 31;		/* Additional length */
@@ -2462,12 +2463,12 @@ static struct fsg_common *fsg_common_init(struct fsg_common *common,
 
 	/* Allocate? */
 	if (!common) {
-		common = calloc(sizeof *common, 1);
+		common = calloc(sizeof(*common), 1);
 		if (!common)
 			return ERR_PTR(-ENOMEM);
 		common->free_storage_on_release = 1;
 	} else {
-		memset(common, 0, sizeof common);
+		memset(common, 0, sizeof(*common));
 		common->free_storage_on_release = 0;
 	}
 

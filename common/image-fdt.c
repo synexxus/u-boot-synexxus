@@ -355,7 +355,6 @@ int boot_get_fdt(int flag, int argc, char * const argv[], uint8_t arch,
 				ulong load, len;
 
 				fdt_noffset = fit_image_load(images,
-					FIT_FDT_PROP,
 					fdt_addr, &fit_uname_fdt,
 					&fit_uname_config,
 					arch, IH_TYPE_FLATDT,
@@ -463,7 +462,7 @@ int image_setup_libfdt(bootm_headers_t *images, void *blob,
 	ulong *initrd_end = &images->initrd_end;
 	int ret;
 
-	if (fdt_chosen(blob, 1) < 0) {
+	if (fdt_chosen(blob) < 0) {
 		puts("ERROR: /chosen node create failed");
 		puts(" - must RESET the board to recover.\n");
 		return -1;
@@ -489,7 +488,7 @@ int image_setup_libfdt(bootm_headers_t *images, void *blob,
 	/* Create a new LMB reservation */
 	lmb_reserve(lmb, (ulong)blob, of_size);
 
-	fdt_initrd(blob, *initrd_start, *initrd_end, 1);
+	fdt_initrd(blob, *initrd_start, *initrd_end);
 	if (!ft_verify_fdt(blob))
 		return -1;
 

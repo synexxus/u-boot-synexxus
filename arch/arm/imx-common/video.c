@@ -34,13 +34,10 @@ int board_video_skip(void)
 				break;
 		}
 	}
-puts("board_video_skip\n");
 	if (i < display_count) {
 		ret = ipuv3_fb_init(&displays[i].mode, 0,
 				    displays[i].pixfmt);
-		puts("after ipuv3\n");
 		if (!ret) {
-			puts("Yes.. Ret!\n");
 			displays[i].enable(displays+i);
 			printf("Display: %s (%ux%u)\n",
 			       displays[i].mode.name,

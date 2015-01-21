@@ -34,6 +34,22 @@
 #error This driver can not work on systems with caches longer than 128b
 #endif
 
+/*
+ * Every QTD must be individually aligned, since we can program any
+ * QTD's address into HW. Cache flushing requires ARCH_DMA_MINALIGN,
+ * and the USB HW requires 32-byte alignment. Align to both:
+ */
+#define ILIST_ALIGN		roundup(ARCH_DMA_MINALIGN, 32)
+/* Each QTD is this size */
+#define ILIST_ENT_RAW_SZ	sizeof(struct ept_queue_item)
+/*
+ * Align the size of the QTD too, so we can add this value to each
+ * QTD's address to get another aligned address.
+ */
+#define ILIST_ENT_SZ		roundup(ILIST_ENT_RAW_SZ, ILIST_ALIGN)
+/* For each endpoint, we need 2 QTDs, one for each of IN and OUT */
+#define ILIST_SZ		(NUM_ENDPOINTS * 2 * ILIST_ENT_SZ)
+
 #ifndef DEBUG
 #define DBG(x...) do {} while (0)
 #else
@@ -130,7 +146,9 @@ static struct ept_queue_head *ci_get_qh(int ep_num, int dir_in)
  */
 static struct ept_queue_item *ci_get_qtd(int ep_num, int dir_in)
 {
-	return controller.items[(ep_num * 2) + dir_in];
+	int index = (ep_num * 2) + dir_in;
+	uint8_t *imem = controller.items_mem + (index * ILIST_ENT_SZ);
+	return (struct ept_queue_item *)imem;
 }
 
 /**
@@ -173,8 +191,7 @@ static void ci_flush_qtd(int ep_num)
 {
 	struct ept_queue_item *item = ci_get_qtd(ep_num, 0);
 	const uint32_t start = (uint32_t)item;
-	const uint32_t end_raw = start + 2 * sizeof(*item);
-	const uint32_t end = roundup(end_raw, ARCH_DMA_MINALIGN);
+	const uint32_t end = start + 2 * ILIST_ENT_SZ;
 
 	flush_dcache_range(start, end);
 }
@@ -189,8 +206,7 @@ static void ci_invalidate_qtd(int ep_num)
 {
 	struct ept_queue_item *item = ci_get_qtd(ep_num, 0);
 	const uint32_t start = (uint32_t)item;
-	const uint32_t end_raw = start + 2 * sizeof(*item);
-	const uint32_t end = roundup(end_raw, ARCH_DMA_MINALIGN);
+	const uint32_t end = start + 2 * ILIST_ENT_SZ;
 
 	invalidate_dcache_range(start, end);
 }
@@ -206,12 +222,11 @@ ci_ep_alloc_request(struct usb_ep *ep, unsigned int gfp_flags)
 	if (num == 0 && controller.ep0_req)
 		return &controller.ep0_req->req;
 
-	ci_req = memalign(ARCH_DMA_MINALIGN, sizeof(*ci_req));
+	ci_req = calloc(1, sizeof(*ci_req));
 	if (!ci_req)
 		return NULL;
 
 	INIT_LIST_HEAD(&ci_req->queue);
-	ci_req->b_buf = 0;
 
 	if (num == 0)
 		controller.ep0_req = ci_req;
@@ -226,8 +241,11 @@ static void ci_ep_free_request(struct usb_ep *ep, struct usb_request *req)
 	int num;
 
 	num = ci_ep->desc->bEndpointAddress & USB_ENDPOINT_NUMBER_MASK;
-	if (num == 0)
+	if (num == 0) {
+		if (!controller.ep0_req)
+			return;
 		controller.ep0_req = 0;
+	}
 
 	if (ci_req->b_buf)
 		free(ci_req->b_buf);
@@ -401,10 +419,11 @@ static void ci_ep_submit_next_request(struct ci_ep *ci_ep)
 		 * only 1 is used at a time since either an IN or an OUT but
 		 * not both is queued. For an IN transaction, item currently
 		 * points at the second of these items, so we know that we
-		 * can use (item - 1) to transmit the extra zero-length packet
+		 * can use the other to transmit the extra zero-length packet.
 		 */
-		item->next = (unsigned)(item - 1);
-		item--;
+		struct ept_queue_item *other_item = ci_get_qtd(num, 0);
+		item->next = (unsigned)other_item;
+		item = other_item;
 		item->info = INFO_ACTIVE;
 	}
 
@@ -468,22 +487,22 @@ static int ci_ep_queue(struct usb_ep *ep,
 static void flip_ep0_direction(void)
 {
 	if (ep0_desc.bEndpointAddress == USB_DIR_IN) {
-		DBG("%s: Flipping ep0 ot OUT\n", __func__);
+		DBG("%s: Flipping ep0 to OUT\n", __func__);
 		ep0_desc.bEndpointAddress = 0;
 	} else {
-		DBG("%s: Flipping ep0 ot IN\n", __func__);
+		DBG("%s: Flipping ep0 to IN\n", __func__);
 		ep0_desc.bEndpointAddress = USB_DIR_IN;
 	}
 }
 
-static void handle_ep_complete(struct ci_ep *ep)
+static void handle_ep_complete(struct ci_ep *ci_ep)
 {
 	struct ept_queue_item *item;
 	int num, in, len;
 	struct ci_req *ci_req;
 
-	num = ep->desc->bEndpointAddress & USB_ENDPOINT_NUMBER_MASK;
-	in = (ep->desc->bEndpointAddress & USB_DIR_IN) != 0;
+	num = ci_ep->desc->bEndpointAddress & USB_ENDPOINT_NUMBER_MASK;
+	in = (ci_ep->desc->bEndpointAddress & USB_DIR_IN) != 0;
 	item = ci_get_qtd(num, in);
 	ci_invalidate_qtd(num);
 
@@ -492,12 +511,12 @@ static void handle_ep_complete(struct ci_ep *ep)
 		printf("EP%d/%s FAIL info=%x pg0=%x\n",
 		       num, in ? "in" : "out", item->info, item->page0);
 
-	ci_req = list_first_entry(&ep->queue, struct ci_req, queue);
+	ci_req = list_first_entry(&ci_ep->queue, struct ci_req, queue);
 	list_del_init(&ci_req->queue);
-	ep->req_primed = false;
+	ci_ep->req_primed = false;
 
-	if (!list_empty(&ep->queue))
-		ci_ep_submit_next_request(ep);
+	if (!list_empty(&ci_ep->queue))
+		ci_ep_submit_next_request(ci_ep);
 
 	ci_req->req.actual = ci_req->req.length - len;
 	ci_debounce(ci_req, in);
@@ -505,7 +524,7 @@ static void handle_ep_complete(struct ci_ep *ep)
 	DBG("ept%d %s req %p, complete %x\n",
 	    num, in ? "in" : "out", ci_req, len);
 	if (num != 0 || controller.ep0_data_phase)
-		ci_req->req.complete(&ep->ep, &ci_req->req);
+		ci_req->req.complete(&ci_ep->ep, &ci_req->req);
 	if (num == 0 && controller.ep0_data_phase) {
 		/*
 		 * Data Stage is complete, so flip ep0 dir for Status Stage,
@@ -515,7 +534,7 @@ static void handle_ep_complete(struct ci_ep *ep)
 		flip_ep0_direction();
 		controller.ep0_data_phase = false;
 		ci_req->req.length = 0;
-		usb_ep_queue(&ep->ep, &ci_req->req, 0);
+		usb_ep_queue(&ci_ep->ep, &ci_req->req, 0);
 	}
 }
 
@@ -758,6 +777,11 @@ static int ci_pullup(struct usb_gadget *gadget, int is_on)
 		/* select DEVICE mode */
 		writel(USBMODE_DEVICE, &udc->usbmode);
 
+#if !defined(CONFIG_USB_GADGET_DUALSPEED) && defined(CONFIG_MX6)
+		/* force full-speed mode */
+		writel(readl(&udc->portsc)|(1<<24), &udc->portsc);
+#endif
+
 		writel(0xffffffff, &udc->epflush);
 
 		/* Turn on the USB connection by enabling the pullup resistor */
@@ -772,7 +796,6 @@ static int ci_pullup(struct usb_gadget *gadget, int is_on)
 static int ci_udc_probe(void)
 {
 	struct ept_queue_head *head;
-	uint8_t *imem;
 	int i;
 
 	const int num = 2 * NUM_ENDPOINTS;
@@ -782,29 +805,18 @@ static int ci_udc_probe(void)
 	const int eplist_raw_sz = num * sizeof(struct ept_queue_head);
 	const int eplist_sz = roundup(eplist_raw_sz, ARCH_DMA_MINALIGN);
 
-	const int ilist_align = roundup(ARCH_DMA_MINALIGN, 32);
-	const int ilist_ent_raw_sz = 2 * sizeof(struct ept_queue_item);
-	const int ilist_ent_sz = roundup(ilist_ent_raw_sz, ARCH_DMA_MINALIGN);
-	const int ilist_sz = NUM_ENDPOINTS * ilist_ent_sz;
-
 	/* The QH list must be aligned to 4096 bytes. */
 	controller.epts = memalign(eplist_align, eplist_sz);
 	if (!controller.epts)
 		return -ENOMEM;
 	memset(controller.epts, 0, eplist_sz);
 
-	/*
-	 * Each qTD item must be 32-byte aligned, each qTD touple must be
-	 * cacheline aligned. There are two qTD items for each endpoint and
-	 * only one of them is used for the endpoint at time, so we can group
-	 * them together.
-	 */
-	controller.items_mem = memalign(ilist_align, ilist_sz);
+	controller.items_mem = memalign(ILIST_ALIGN, ILIST_SZ);
 	if (!controller.items_mem) {
 		free(controller.epts);
 		return -ENOMEM;
 	}
-	memset(controller.items_mem, 0, ilist_sz);
+	memset(controller.items_mem, 0, ILIST_SZ);
 
 	for (i = 0; i < 2 * NUM_ENDPOINTS; i++) {
 		/*
@@ -824,15 +836,9 @@ static int ci_udc_probe(void)
 		head->next = TERMINATE;
 		head->info = 0;
 
-		imem = controller.items_mem + ((i >> 1) * ilist_ent_sz);
-		if (i & 1)
-			imem += sizeof(struct ept_queue_item);
-
-		controller.items[i] = (struct ept_queue_item *)imem;
-
 		if (i & 1) {
-			ci_flush_qh(i - 1);
-			ci_flush_qtd(i - 1);
+			ci_flush_qh(i / 2);
+			ci_flush_qtd(i / 2);
 		}
 	}
 
@@ -908,6 +914,9 @@ int usb_gadget_register_driver(struct usb_gadget_driver *driver)
 int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 {
 	udc_disconnect();
+
+	driver->unbind(&controller.gadget);
+	controller.driver = NULL;
 
 	ci_ep_free_request(&controller.ep[0].ep, &controller.ep0_req->req);
 	free(controller.items_mem);

@@ -108,23 +108,18 @@ static int do_spi_flash_probe(int argc, char * const argv[])
 			if (*endp != 0)
 				return -1;
 		}
-printf("argv:1:%s\n",argv[1]);
 	}
-
 
 	if (argc >= 3) {
 		speed = simple_strtoul(argv[2], &endp, 0);
 		if (*argv[2] == 0 || *endp != 0)
 			return -1;
-printf("argv:2:%s\n",argv[2]);
 	}
 	if (argc >= 4) {
 		mode = simple_strtoul(argv[3], &endp, 16);
 		if (*argv[3] == 0 || *endp != 0)
 			return -1;
-printf("argv:3:%s\n",argv[3]);
 	}
-
 
 	new = spi_flash_probe(bus, cs, speed, mode);
 	if (!new) {

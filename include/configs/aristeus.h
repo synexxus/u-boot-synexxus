@@ -1,11 +1,10 @@
 /*
  * Copyright (C) 2010-2011 Freescale Semiconductor, Inc.
  *
- * Configuration settings for the Boundary Devices Nitrogen6X
- * and Freescale i.MX6Q Sabre Lite boards.
+ * Configuration settings for the Synexxus Aristeus Board
+ *
  *
  * SPDX-License-Identifier:	GPL-2.0+
- * Updated: 07/07/2014
  */
 
 #ifndef __CONFIG_H
@@ -28,17 +27,18 @@
 #define CONFIG_SETUP_MEMORY_TAGS
 #define CONFIG_INITRD_TAG
 #define CONFIG_REVISION_TAG
+
 #define CONFIG_SYS_GENERIC_BOARD
 
 /* Size of malloc() pool */
-#define CONFIG_SYS_MALLOC_LEN		(10 * 1024 * 1024)
+#define CONFIG_SYS_MALLOC_LEN		(12 * 1024 * 1024)
 
 #define CONFIG_BOARD_EARLY_INIT_F
 #define CONFIG_MISC_INIT_R
 #define CONFIG_MXC_GPIO
 #define CONFIG_CI_UDC
 #define CONFIG_USBD_HS
-#define CONFIG_USB_GADGET_DUALSPEED
+//#define CONFIG_USB_GADGET_DUALSPEED
 #define CONFIG_USB_ETHER
 #define CONFIG_USB_ETH_CDC
 #define CONFIG_NETCONSOLE
@@ -63,7 +63,6 @@
 #define CONFIG_SF_DEFAULT_CS   (0|(IMX_GPIO_NR(3, 19)<<8))
 #define CONFIG_SF_DEFAULT_SPEED 5000000
 #define CONFIG_SF_DEFAULT_MODE (SPI_MODE_0)
-#define CONFIG_SPI_FLASH_SST
 #define CONFIG_CMD_SPI
 #endif
 
@@ -72,6 +71,7 @@
 #define CONFIG_SYS_I2C
 #define CONFIG_SYS_I2C_MXC
 #define CONFIG_SYS_I2C_SPEED		100000
+#define CONFIG_I2C_EDID			// JREEP ARISTEUS: 01/21/2015
 
 /* MMC Configs */
 #define CONFIG_FSL_ESDHC
@@ -85,6 +85,8 @@
 #define CONFIG_BOUNCE_BUFFER
 #define CONFIG_CMD_EXT2
 #define CONFIG_CMD_FAT
+#define CONFIG_CMD_EXT4
+#define CONFIG_CMD_FS_GENERIC
 #define CONFIG_DOS_PARTITION
 
 #ifdef CONFIG_MX6Q
@@ -115,7 +117,7 @@
 #define IMX_FEC_BASE			ENET_BASE_ADDR
 #define CONFIG_FEC_XCV_TYPE		RGMII
 #define CONFIG_ETHPRIME			"FEC"
-#define CONFIG_FEC_MXC_PHYADDR		-1
+#define CONFIG_FEC_MXC_PHYADDR		6
 #define CONFIG_PHYLIB
 #define CONFIG_PHY_MICREL
 #define CONFIG_PHY_MICREL_KSZ9031
@@ -134,6 +136,8 @@
 #define CONFIG_EHCI_HCD_INIT_AFTER_RESET	/* For OTG port */
 #define CONFIG_MXC_USB_PORTSC	(PORT_PTS_UTMI | PORT_PTS_PTW)
 #define CONFIG_MXC_USB_FLAGS	0
+#define CONFIG_USB_KEYBOARD
+#define CONFIG_SYS_USB_EVENT_POLL_VIA_CONTROL_EP
 
 /* Miscellaneous commands */
 #define CONFIG_CMD_BMODE
@@ -148,6 +152,13 @@
 #define CONFIG_SYS_CONSOLE_OVERWRITE_ROUTINE
 #define CONFIG_VIDEO_BMP_RLE8
 #define CONFIG_SPLASH_SCREEN
+#define CONFIG_SPLASH_SCREEN_ALIGN
+
+//#define CONFIG_VIDEO_BMP_GZIP
+#ifdef CONFIG_VIDEO_BMP_GZIP
+#define CONFIG_SYS_VIDEO_LOGO_MAX_SIZE (6 * 1024 * 1024)
+#endif
+
 #define CONFIG_BMP_16BPP
 #define CONFIG_VIDEO_LOGO
 #define CONFIG_IPUV3_CLK 	260000000
@@ -166,7 +177,7 @@
 
 #undef CONFIG_CMD_IMLS
 
-#define CONFIG_BOOTDELAY	       0
+#define CONFIG_BOOTDELAY	       1
 
 #define CONFIG_PREBOOT                 ""
 
@@ -185,13 +196,22 @@
 #define CONFIG_DRIVE_MMC
 #endif
 
-#define CONFIG_DRIVE_TYPES CONFIG_DRIVE_SATA CONFIG_DRIVE_MMC
+#ifdef CONFIG_USB_STORAGE
+#define CONFIG_DRIVE_USB "usb "
+#else
+#define CONFIG_DRIVE_USB
+#endif
 
-#if defined(CONFIG_SABRELITE)
+//#define CONFIG_DRIVE_TYPES CONFIG_DRIVE_SATA CONFIG_DRIVE_MMC
+#define CONFIG_DRIVE_TYPES CONFIG_DRIVE_SATA CONFIG_DRIVE_MMC CONFIG_DRIVE_USB
+#define CONFIG_UMSDEVS CONFIG_DRIVE_SATA CONFIG_DRIVE_MMC
+
+//#if defined(CONFIG_SABRELITE)
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"script=boot.scr\0" \
 	"uimage=uImage\0" \
-	"console=ttymxc1\0" \
+	"zimage=zImage\0" \
+	"console=ttymxc0\0" \
 	"fdt_high=0xffffffff\0" \
 	"initrd_high=0xffffffff\0" \
 	"fdt_file=imx6q-aristeus.dtb\0" \
@@ -200,7 +220,7 @@
 	"ip_dyn=yes\0" \
 	"mmcdev=0\0" \
 	"mmcpart=1\0" \
-	"mmcroot=/dev/mmcblk0p2 rootwait rw\0" \
+	"mmcroot=/dev/mmcblk0p2 rootwait ro\0" \
 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
 		"root=${mmcroot}\0" \
 	"loadbootscript=" \
@@ -260,115 +280,7 @@
 			   "fi; " \
 		   "fi; " \
 	   "else run netboot; fi"
-#else
-#define CONFIG_EXTRA_ENV_SETTINGS \
-	"console=ttymxc0\0" \
-	"clearenv=if sf probe || sf probe || sf probe 1 ; then " \
-		"sf erase 0xc0000 0x2000 && " \
-		"echo restored environment to factory default ; fi\0" \
-	"bootcmd=for dtype in " CONFIG_DRIVE_TYPES \
-		"; do " \
-			"for disk in 0 1 ; do ${dtype} dev ${disk} ;" \
-				"for fs in fat ext2 ; do " \
-					"${fs}load " \
-						"${dtype} ${disk}:1 " \
-						"10008000 " \
-						"/6x_bootscript" \
-						"&& source 10008000 ; " \
-				"done ; " \
-			"done ; " \
-		"done; " \
-		"setenv stdout serial,vga ; " \
-		"echo ; echo 6x_bootscript not found ; " \
-		"echo ; echo serial console at 115200, 8N1 ; echo ; " \
-		"echo details at http://boundarydevices.com/6q_bootscript ; " \
-		"setenv stdout serial\0" \
-	"upgradeu=for dtype in " CONFIG_DRIVE_TYPES \
-		"; do " \
-		"for disk in 0 1 ; do ${dtype} dev ${disk} ;" \
-		     "for fs in fat ext2 ; do " \
-				"${fs}load ${dtype} ${disk}:1 10008000 " \
-					"/6x_upgrade " \
-					"&& source 10008000 ; " \
-			"done ; " \
-		"done ; " \
-	"done\0" \
 
-#endif
-/*
-#define CONFIG_EXTRA_ENV_SETTINGS \
-	"script=boot.scr\0" \
-	"uimage=uImage\0" \
-	"console=ttymxc0\0" \
-	"fdt_high=0xffffffff\0" \
-	"initrd_high=0xffffffff\0" \
-	"fdt_file=imx6q-aristeus.dtb\0" \
-	"fdt_addr=0x18000000\0" \
-	"boot_fdt=try\0" \
-	"ip_dyn=yes\0" \
-	"mmcdev=1\0" \
-	"mmcpart=1\0" \
-	"mmcroot=/dev/mmcblk0p1 rootwait rw\0" \
-	"mmcargs=setenv bootargs console=${console},${baudrate} " \
-		"root=${mmcroot}\0" \
-	"loadbootscript=" \
-		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
-	"bootscript=echo Running bootscript from mmc ...; " \
-		"source\0" \
-	"loaduimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${uimage}\0" \
-	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
-	"mmcboot=echo Booting from mmc ...; " \
-		"run mmcargs; " \
-		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
-			"if run loadfdt; then " \
-				"bootm ${loadaddr} - ${fdt_addr}; " \
-			"else " \
-				"if test ${boot_fdt} = try; then " \
-					"bootm; " \
-				"else " \
-					"echo WARN: Cannot load the DT; " \
-				"fi; " \
-			"fi; " \
-		"else " \
-			"bootm; " \
-		"fi;\0" \
-	"netargs=setenv bootargs console=${console},${baudrate} " \
-		"root=/dev/nfs " \
-	"ip=dhcp nfsroot=${serverip}:${nfsroot},v3,tcp\0" \
-		"netboot=echo Booting from net ...; " \
-		"run netargs; " \
-		"if test ${ip_dyn} = yes; then " \
-			"setenv get_cmd dhcp; " \
-		"else " \
-			"setenv get_cmd tftp; " \
-		"fi; " \
-		"${get_cmd} ${uimage}; " \
-		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
-			"if ${get_cmd} ${fdt_addr} ${fdt_file}; then " \
-				"bootm ${loadaddr} - ${fdt_addr}; " \
-			"else " \
-				"if test ${boot_fdt} = try; then " \
-					"bootm; " \
-				"else " \
-					"echo WARN: Cannot load the DT; " \
-				"fi; " \
-			"fi; " \
-		"else " \
-			"bootm; " \
-		"fi;\0"
-
-#define CONFIG_BOOTCOMMAND \
-	   "mmc dev ${mmcdev}; if mmc rescan; then " \
-		   "if run loadbootscript; then " \
-			   "run bootscript; " \
-		   "else " \
-			   "if run loaduimage; then " \
-				   "run mmcboot; " \
-			   "else run netboot; " \
-			   "fi; " \
-		   "fi; " \
-	   "else run netboot; fi"
-*/
 
 /* Miscellaneous configurable options */
 #define CONFIG_SYS_LONGHELP
@@ -379,7 +291,7 @@
 
 /* Print Buffer Size */
 #define CONFIG_SYS_PBSIZE (CONFIG_SYS_CBSIZE + sizeof(CONFIG_SYS_PROMPT) + 16)
-#define CONFIG_SYS_MAXARGS	       16
+#define CONFIG_SYS_MAXARGS	       48
 #define CONFIG_SYS_BARGSIZE CONFIG_SYS_CBSIZE
 
 /* Add Memtest 06/17/2014... */
@@ -398,6 +310,7 @@
 /* Physical Memory Map */
 #define CONFIG_NR_DRAM_BANKS	       1
 #define PHYS_SDRAM		       MMDC0_ARB_BASE_ADDR
+#define CONFIG_RESET_CAUSE_ADDR	       (PHYS_SDRAM + 0x80)
 
 #define CONFIG_SYS_SDRAM_BASE	       PHYS_SDRAM
 #define CONFIG_SYS_INIT_RAM_ADDR       IRAM_BASE_ADDR
@@ -446,6 +359,7 @@
 #define CONFIG_CMD_BOOTZ
 #define CONFIG_SUPPORT_RAW_INITRD
 #define CONFIG_CMD_FS_GENERIC
+#define CONFIG_BOARD_LATE_INIT
 
 /*
  * PCI express
@@ -461,5 +375,23 @@
 // Aristeus doesn't implement this
 //#define CONFIG_PCIE_IMX_POWER_GPIO	IMX_GPIO_NR(3, 19)
 #endif
+
+#define CONFIG_CMD_ELF
+
+//#define CONFIG_USB_GADGET
+//#define CONFIG_CMD_USB_MASS_STORAGE
+//#define CONFIG_USB_GADGET_MASS_STORAGE
+//#define CONFIG_USBDOWNLOAD_GADGET
+//#define CONFIG_USB_GADGET_VBUS_DRAW	2
+
+/* Netchip IDs */
+//#define CONFIG_G_DNL_VENDOR_NUM 0x0525
+//#define CONFIG_G_DNL_PRODUCT_NUM 0xa4a5
+//#define CONFIG_G_DNL_MANUFACTURER "Boundary"
+
+//#define CONFIG_CMD_FASTBOOT
+//#define CONFIG_ANDROID_BOOT_IMAGE
+//#define CONFIG_USB_FASTBOOT_BUF_ADDR   CONFIG_SYS_LOAD_ADDR
+//#define CONFIG_USB_FASTBOOT_BUF_SIZE   0x07000000
 
 #endif	       /* __CONFIG_H */

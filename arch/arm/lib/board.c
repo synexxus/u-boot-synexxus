@@ -589,7 +589,6 @@ void board_init_r(gd_t *id, ulong dest_addr)
 #endif
 
 #ifdef CONFIG_GENERIC_MMC
-printf("In Board.c\n");
 	puts("MMC:   ");
 	mmc_initialize(gd->bd);
 #endif
@@ -609,8 +608,6 @@ printf("In Board.c\n");
 		env_relocate();
 	else
 		set_default_env(NULL);
-
-printf("\n\tEnvironment Done\n");
 
 #if defined(CONFIG_CMD_PCI) || defined(CONFIG_PCI)
 	arm_pci_init();
