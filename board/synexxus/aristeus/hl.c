@@ -684,31 +684,14 @@ static int detect_i2c(struct display_info_t const *dev)
 		(0 == i2c_probe(dev->addr)));
 }
 
-static void disable_lvds(struct display_info_t const *dev)
-{
-	struct iomuxc *iomux = (struct iomuxc *)IOMUXC_BASE_ADDR;
-
-	int reg = readl(&iomux->gpr[2]);
-
-	reg &= ~(IOMUXC_GPR2_LVDS_CH0_MODE_MASK |
-		 IOMUXC_GPR2_LVDS_CH1_MODE_MASK);
-
-	writel(reg, &iomux->gpr[2]);
-}
-
 static void enable_lvds(struct display_info_t const *dev)
 {
 	struct iomuxc *iomux = (struct iomuxc *)
 				IOMUXC_BASE_ADDR;
 	u32 reg = readl(&iomux->gpr[2]);
-	reg |= IOMUXC_GPR2_DATA_WIDTH_CH0_18BIT |
-		IOMUXC_GPR2_DATA_WIDTH_CH1_18BIT;
+	reg |= IOMUXC_GPR2_DATA_WIDTH_CH0_24BIT;
 	writel(reg, &iomux->gpr[2]);
 	gpio_direction_output(LVDS_BACKLIGHT_GP, 1);
-
-#ifdef LVDS_PANEL_EN
-	gpio_direction_output(LVDS_PANEL_EN, 1);
-#endif
 }
 
 static void enable_lvds_jeida(struct display_info_t const *dev)
@@ -720,9 +703,6 @@ static void enable_lvds_jeida(struct display_info_t const *dev)
 	     |IOMUXC_GPR2_BIT_MAPPING_CH0_JEIDA;
 	writel(reg, &iomux->gpr[2]);
 	gpio_direction_output(LVDS_BACKLIGHT_GP, 1);
-#ifdef LVDS_PANEL_EN
-	gpio_direction_output(LVDS_PANEL_EN, 1);
-#endif
 }
 
 static void enable_rgb(struct display_info_t const *dev)
@@ -777,46 +757,6 @@ struct display_info_t const displays[] = {{
 		.vmode          = FB_VMODE_NONINTERLACED
 } }, {
 	.bus	= 2,
-	.addr	= 0x48,
-	.pixfmt	= IPU_PIX_FMT_RGB666,
-	.detect	= detect_i2c,
-	.enable	= enable_lvds,
-	.mode	= {
-		.name           = "WXGA-R",
-		.refresh        = 60,
-		.xres           = 1280,
-		.yres           = 800,
-		.pixclock       = 14065,
-		.left_margin    = 40,
-		.right_margin   = 40,
-		.upper_margin   = 3,
-		.lower_margin   = 80,
-		.hsync_len      = 10,
-		.vsync_len      = 10,
-		.sync           = FB_SYNC_EXT,
-		.vmode          = FB_VMODE_NONINTERLACED
-} }, {
-	.bus	= 2,
-	.addr	= 0x48,
-	.pixfmt	= IPU_PIX_FMT_RGB24,
-	.detect	= detect_i2c,
-	.enable	= enable_lvds,
-	.mode	= {
-		.name           = "WXGA-R8",
-		.refresh        = 60,
-		.xres           = 1280,
-		.yres           = 800,
-		.pixclock       = 14065,
-		.left_margin    = 40,
-		.right_margin   = 40,
-		.upper_margin   = 3,
-		.lower_margin   = 80,
-		.hsync_len      = 10,
-		.vsync_len      = 10,
-		.sync           = FB_SYNC_EXT,
-		.vmode          = FB_VMODE_NONINTERLACED
-} }, {
-	.bus	= 2,
 	.addr	= 0x4,
 	.pixfmt	= IPU_PIX_FMT_LVDS666,
 	.detect	= detect_i2c,
@@ -835,47 +775,7 @@ struct display_info_t const displays[] = {{
 		.vsync_len      = 10,
 		.sync           = FB_SYNC_EXT,
 		.vmode          = FB_VMODE_NONINTERLACED
-} },  {
-	.bus	= 2,
-	.addr	= 0x4,
-	.pixfmt	= IPU_PIX_FMT_RGB24,
-	.detect	= detect_i2c,
-	.enable	= enable_lvds,
-	.mode	= {
-		.name           = "XGA8",
-		.refresh        = 60,
-		.xres           = 1024,
-		.yres           = 768,
-		.pixclock       = 15385,
-		.left_margin    = 220,
-		.right_margin   = 40,
-		.upper_margin   = 21,
-		.lower_margin   = 7,
-		.hsync_len      = 60,
-		.vsync_len      = 10,
-		.sync           = FB_SYNC_EXT,
-		.vmode          = FB_VMODE_NONINTERLACED
-} },  {
-	.bus	= 2,
-	.addr	= 0x4,
-	.pixfmt	= IPU_PIX_FMT_RGB666,
-	.detect	= detect_i2c,
-	.enable	= enable_lvds,
-	.mode	= {
-		.name           = "XGA6",
-		.refresh        = 60,
-		.xres           = 1024,
-		.yres           = 768,
-		.pixclock       = 15385,
-		.left_margin    = 220,
-		.right_margin   = 40,
-		.upper_margin   = 21,
-		.lower_margin   = 7,
-		.hsync_len      = 60,
-		.vsync_len      = 10,
-		.sync           = FB_SYNC_EXT,
-		.vmode          = FB_VMODE_NONINTERLACED
-} },  {
+} }, {
 	.bus	= 0,
 	.addr	= 0,
 	.pixfmt	= IPU_PIX_FMT_RGB24,
@@ -1072,11 +972,10 @@ static void setup_display(void)
 	int reg;
 
 	enable_ipu_clock();
-	//imx_setup_hdmi();
-
+	imx_setup_hdmi();
 	/* Turn on LDB0,IPU,IPU DI0 clocks */
 	reg = __raw_readl(&mxc_ccm->CCGR3);
-	reg |=  MXC_CCM_CCGR3_LDB_DI0_MASK | MXC_CCM_CCGR3_LDB_DI1_MASK;
+	reg |=  MXC_CCM_CCGR3_LDB_DI0_MASK;
 	writel(reg, &mxc_ccm->CCGR3);
 
 	/* set LDB0, LDB1 clk select to 011/011 */
@@ -1088,74 +987,65 @@ static void setup_display(void)
 	writel(reg, &mxc_ccm->cs2cdr);
 
 	reg = readl(&mxc_ccm->cscmr2);
-	reg |= MXC_CCM_CSCMR2_LDB_DI0_IPU_DIV | MXC_CCM_CSCMR2_LDB_DI1_IPU_DIV;
+	reg |= MXC_CCM_CSCMR2_LDB_DI0_IPU_DIV;
 	writel(reg, &mxc_ccm->cscmr2);
 
 	reg = readl(&mxc_ccm->chsccdr);
 	reg |= (CHSCCDR_CLK_SEL_LDB_DI0
 		<<MXC_CCM_CHSCCDR_IPU1_DI0_CLK_SEL_OFFSET);
-	reg |= (CHSCCDR_CLK_SEL_LDB_DI0
-		<< MXC_CCM_CHSCCDR_IPU1_DI1_CLK_SEL_OFFSET);
 	writel(reg, &mxc_ccm->chsccdr);
 
 	reg = IOMUXC_GPR2_BGREF_RRMODE_EXTERNAL_RES
-	     |IOMUXC_GPR2_DI1_VS_POLARITY_ACTIVE_LOW
+	     |IOMUXC_GPR2_DI1_VS_POLARITY_ACTIVE_HIGH
 	     |IOMUXC_GPR2_DI0_VS_POLARITY_ACTIVE_LOW
 	     |IOMUXC_GPR2_BIT_MAPPING_CH1_SPWG
 	     |IOMUXC_GPR2_DATA_WIDTH_CH1_18BIT
 	     |IOMUXC_GPR2_BIT_MAPPING_CH0_SPWG
 	     |IOMUXC_GPR2_DATA_WIDTH_CH0_18BIT
-	     | IOMUXC_GPR2_LVDS_CH1_MODE_DISABLED
-	     | IOMUXC_GPR2_LVDS_CH0_MODE_ENABLED_DI0;
+	     |IOMUXC_GPR2_LVDS_CH1_MODE_DISABLED
+	     |IOMUXC_GPR2_LVDS_CH0_MODE_ENABLED_DI0;
 	writel(reg, &iomux->gpr[2]);
 
 	reg = readl(&iomux->gpr[3]);
-	reg = (reg & 	~(IOMUXC_GPR3_LVDS0_MUX_CTL_MASK
-			| IOMUXC_GPR3_HDMI_MUX_CTL_MASK 
-			| IOMUXC_GPR3_LVDS1_MUX_CTL_MASK
-			| IOMUXC_GPR3_MIPI_MUX_CTL_MASK) )
-	    	| (IOMUXC_GPR3_MUX_SRC_IPU1_DI0 << IOMUXC_GPR3_LVDS0_MUX_CTL_OFFSET);
+	reg = (reg & ~(IOMUXC_GPR3_LVDS0_MUX_CTL_MASK
+			|IOMUXC_GPR3_HDMI_MUX_CTL_MASK))
+	    | (IOMUXC_GPR3_MUX_SRC_IPU1_DI0
+	       <<IOMUXC_GPR3_LVDS0_MUX_CTL_OFFSET);
 	writel(reg, &iomux->gpr[3]);
 
 	/* backlights off until needed */
 	imx_iomux_v3_setup_multiple_pads(backlight_pads,
 					 ARRAY_SIZE(backlight_pads));
-
-	gpio_direction_output(LVDS_BACKLIGHT_GP, 1);
-
-#ifdef LVDS_PANEL_EN
-	gpio_direction_output(LVDS_PANEL_EN, 1);
-#endif
-
-#ifdef HIDE_BOOT_SCREEN
 	gpio_direction_input(LVDS_BACKLIGHT_GP);
 	gpio_direction_input(RGB_BACKLIGHT_GP);
-#endif
 }
 #endif
 
 /* v2014.09 added */
 static iomux_v3_cfg_t const init_pads[] = {
-	/* ARISTEUS */
-	NEW_PAD_CTRL(MX6_PAD_GPIO_0__CCM_CLKO1, OUTPUT_40OHM),		/* GPIO_0_CLKO */
-	NEW_PAD_CTRL(MX6_PAD_GPIO_1__WDOG2_B, OUTPUT_40OHM),		/* WDOG1_B (really WDOG2) */
-	
-	NEW_PAD_CTRL(MX6_PAD_GPIO_6__GPIO1_IO06, NO_PAD_CTRL),		/* INPUT: GPIO6 */
-	NEW_PAD_CTRL(MX6_PAD_GPIO_9__WDOG1_B, OUTPUT_40OHM),		/* WDOG2_B (really WDOG1) */
-
-	NEW_PAD_CTRL(MX6_PAD_GPIO_17__GPIO7_IO12, OUTPUT_40OHM),	/* USB_HUB_RESET_B */
-	NEW_PAD_CTRL(MX6_PAD_GPIO_18__GPIO7_IO13, NO_PAD_CTRL),		/* PMIC_INT_B */
-	NEW_PAD_CTRL(MX6_PAD_GPIO_19__GPIO4_IO05, OUTPUT_40OHM),		/* CAN_STBY */
-
+	//NEW_PAD_CTRL(MX6_PAD_GPIO_0__CCM_CLKO1, OUTPUT_40OHM),	/* SGTL5000 sys_mclk */
+	/* wl1271 pads on nitrogen6x */
+	/* WL12XX_WL_IRQ_GP */
+	//NEW_PAD_CTRL(MX6_PAD_NANDF_CS1__GPIO6_IO14, WEAK_PULLDOWN),
+	/* WL12XX_WL_ENABLE_GP */
+	//NEW_PAD_CTRL(MX6_PAD_NANDF_CS2__GPIO6_IO15, OUTPUT_40OHM),
+	/* WL12XX_BT_ENABLE_GP */
+	//NEW_PAD_CTRL(MX6_PAD_NANDF_CS3__GPIO6_IO16, OUTPUT_40OHM),
+	/* USB otg power */
+	//NEW_PAD_CTRL(MX6_PAD_EIM_D22__GPIO3_IO22, OUTPUT_40OHM),
+	//NEW_PAD_CTRL(MX6_PAD_NANDF_D5__GPIO2_IO05, OUTPUT_40OHM),
+	//NEW_PAD_CTRL(MX6_PAD_NANDF_WP_B__GPIO6_IO09, OUTPUT_40OHM),
+	//NEW_PAD_CTRL(MX6_PAD_GPIO_8__GPIO1_IO08, OUTPUT_40OHM),
+	//NEW_PAD_CTRL(MX6_PAD_GPIO_6__GPIO1_IO06, OUTPUT_40OHM),
 	NEW_PAD_CTRL(MX6_PAD_NANDF_CS0__GPIO6_IO11, OUTPUT_40OHM),	/* ETHERNET_MUX_SW_SEL (GPIO6_IO11) */
-	//NEW_PAD_CTRL(MX6_PAD_NANDF_CS1__GPIO6_IO14, OUTPUT_40OHM),	/* LVDS_PANEL_EN */
+	NEW_PAD_CTRL(MX6_PAD_NANDF_CS1__GPIO6_IO14, OUTPUT_40OHM),	/* LVDS_PANEL_EN */
 	NEW_PAD_CTRL(MX6_PAD_NANDF_CS2__CCM_CLKO2, OUTPUT_40OHM),	/* CCM_CLKO2 */
 	NEW_PAD_CTRL(MX6_PAD_NANDF_CS3__GPIO6_IO16, OUTPUT_40OHM),	/* LVDS_BACKLIGHT_EN */
 
-	NEW_PAD_CTRL(MX6_PAD_NANDF_ALE__GPIO6_IO08, NO_PAD_CTRL),	/* INPUT: WAKE#0 or CAP_TCH_INT0 */
-	NEW_PAD_CTRL(MX6_PAD_NANDF_CLE__GPIO6_IO07, NO_PAD_CTRL),	/* INPUT: WAKE#1 or CAP_TCH_INT1 */
+	NEW_PAD_CTRL(MX6_PAD_NANDF_ALE__GPIO6_IO08, NO_PAD_CTRL),	/* WAKE#0 or CAP_TCH_INT0 */
+	NEW_PAD_CTRL(MX6_PAD_NANDF_CLE__GPIO6_IO07, NO_PAD_CTRL),	/* WAKE#1 or CAP_TCH_INT1 */
 
-	NEW_PAD_CTRL(MX6_PAD_NANDF_WP_B__GPIO6_IO09, OUTPUT_40OHM),		/* SD4_RESET */
+	NEW_PAD_CTRL(NANDF_WP_B__GPIO6_IO09, OUTPUT_40OHM),		/* SD4_RESET */
 };
 
 static unsigned gpios_out_low[] = {
@@ -1164,13 +1054,8 @@ static unsigned gpios_out_low[] = {
 
 
 static unsigned gpios_out_high[] = {
-	IMX_GPIO_NR(4,5),	/* CAN_STBY*/
-
-	//IMX_GPIO_NR(6,14),	/* DISP_PWR_EN OR LVDS_PANEL_EN */
-	IMX_GPIO_NR(6,16),	/* DISP_PWR_EN OR LVDS_PANEL_EN */
+	IMX_GPIO_NR(6,14),	/* DISP_PWR_EN OR LVDS_PANEL_EN */
 	IMX_GPIO_NR(6,9),	/* SD4_RESET */
-
-	IMX_GPIO_NR(7,12),	/* USB_HUB_RESET_B */
 };
 
 static void set_gpios(unsigned *p, int cnt, int val)

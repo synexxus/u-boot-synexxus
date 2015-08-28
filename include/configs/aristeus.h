@@ -59,10 +59,11 @@
 #define CONFIG_SPI_FLASH
 #define CONFIG_SPI_FLASH_SST
 #define CONFIG_MXC_SPI
-#define CONFIG_SF_DEFAULT_BUS  0
-#define CONFIG_SF_DEFAULT_CS   (0|(IMX_GPIO_NR(3, 19)<<8))
-#define CONFIG_SF_DEFAULT_SPEED 5000000
-#define CONFIG_SF_DEFAULT_MODE (SPI_MODE_0)
+#define CONFIG_SF_DEFAULT_BUS  		0
+//#define CONFIG_SF_DEFAULT_CS   		(0|(IMX_GPIO_NR(3, 19)<<8))	//ECSPI1:CS1
+#define CONFIG_SF_DEFAULT_CS   		(0|(IMX_GPIO_NR(2, 30)<<8))		//ECSPI1:CS0
+#define CONFIG_SF_DEFAULT_SPEED 	5000000
+#define CONFIG_SF_DEFAULT_MODE 		(SPI_MODE_0)
 #define CONFIG_CMD_SPI
 #endif
 
@@ -203,84 +204,104 @@
 #endif
 
 //#define CONFIG_DRIVE_TYPES CONFIG_DRIVE_SATA CONFIG_DRIVE_MMC
-#define CONFIG_DRIVE_TYPES CONFIG_DRIVE_SATA CONFIG_DRIVE_MMC CONFIG_DRIVE_USB
+#define CONFIG_DRIVE_TYPES CONFIG_DRIVE_MMC CONFIG_DRIVE_SATA CONFIG_DRIVE_USB
 #define CONFIG_UMSDEVS CONFIG_DRIVE_SATA CONFIG_DRIVE_MMC
 
-//#if defined(CONFIG_SABRELITE)
-#define CONFIG_EXTRA_ENV_SETTINGS \
-	"script=boot.scr\0" \
-	"uimage=uImage\0" \
-	"zimage=zImage\0" \
-	"console=ttymxc0\0" \
-	"fdt_high=0xffffffff\0" \
-	"initrd_high=0xffffffff\0" \
-	"fdt_file=imx6q-aristeus.dtb\0" \
-	"fdt_addr=0x18000000\0" \
-	"boot_fdt=try\0" \
-	"ip_dyn=yes\0" \
-	"mmcdev=0\0" \
-	"mmcpart=1\0" \
-	"mmcroot=/dev/mmcblk0p2 rootwait ro\0" \
-	"mmcargs=setenv bootargs console=${console},${baudrate} " \
-		"root=${mmcroot}\0" \
-	"loadbootscript=" \
-		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
-	"bootscript=echo Running bootscript from mmc ...; " \
-		"source\0" \
-	"loaduimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${uimage}\0" \
-	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
-	"mmcboot=echo Booting from mmc ...; " \
-		"run mmcargs; " \
-		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
-			"if run loadfdt; then " \
-				"bootm ${loadaddr} - ${fdt_addr}; " \
-			"else " \
-				"if test ${boot_fdt} = try; then " \
-					"bootm; " \
-				"else " \
-					"echo WARN: Cannot load the DT; " \
-				"fi; " \
-			"fi; " \
-		"else " \
-			"bootm; " \
-		"fi;\0" \
-	"netargs=setenv bootargs console=${console},${baudrate} " \
-		"root=/dev/nfs " \
-	"ip=dhcp nfsroot=${serverip}:${nfsroot},v3,tcp\0" \
-		"netboot=echo Booting from net ...; " \
-		"run netargs; " \
-		"if test ${ip_dyn} = yes; then " \
-			"setenv get_cmd dhcp; " \
-		"else " \
-			"setenv get_cmd tftp; " \
-		"fi; " \
-		"${get_cmd} ${uimage}; " \
-		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
-			"if ${get_cmd} ${fdt_addr} ${fdt_file}; then " \
-				"bootm ${loadaddr} - ${fdt_addr}; " \
-			"else " \
-				"if test ${boot_fdt} = try; then " \
-					"bootm; " \
-				"else " \
-					"echo WARN: Cannot load the DT; " \
-				"fi; " \
-			"fi; " \
-		"else " \
-			"bootm; " \
-		"fi;\0"
+#define CONFIG_EXTRA_ENV_SETTINGS 				\
+	"script=6x_bootscript\0" 				\
+	"splim=splash.bmp3\0"					\
+	"uimage=uImage\0" 					\
+	"zimage=zImage\0" 					\
+	"console=ttymxc0\0" 					\
+	"fdt_high=0xffffffff\0" 				\
+	"initrd_high=0xffffffff\0" 				\
+	"fdt_file=imx6q-aristeus.dtb\0" 			\
+	"fdt_addr=0x11000000\0" 				\
+	"imxloadaddr=0x10800000\0" 				\
+	"sf0_cs0=15872\0"					\
+	"sf0_cs1=21248\0"					\
+	"mmcdev=0\0" 						\
+	"mmcpart=1\0" 						\
+	"mmcrootpart=2\0" 					\
+	"mmcrootarg=setenv mmcroot /dev/mmcblk${mmcdev}p${mmcrootpart} rootwait ro\0" 		\
+	"mmcargs=setenv bootargs console=${console},${baudrate} root=${mmcroot}\0" 		\
+	"loadbootscript=fatload mmc ${mmcdev}:${mmcpart} ${imxloadaddr} ${script};\0" 		\
+	"loaduimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${uimage}\0" 			\
+	"loadzimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${zimage}\0" 			\
+	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" 			\
+	"loaduboot=fatload mmc ${mmcdev}:${mmcpart} ${imxloadaddr} u-boot.imx;\0"		\
+	"mmcuboot=run loaduboot;"								\
+		"sf probe 0:${sf0_cs0};"							\
+		"sf erase 0 0xC0000;"								\
+		"sf write ${imxloadaddr} 0x400 ${filesize};\0"					\
+	"clearenv=if sf probe || sf probe || sf probe 1 ; then " 				\
+		"sf erase 0xc0000 0x2000 && " 							\
+		"echo restored environment to factory default ; fi\0"				\
+	"bootcmd=for dtype in " CONFIG_DRIVE_TYPES "; do " 					\
+			"for disk in 0 1 ; do ${dtype} dev ${disk} ;" 				\
+				"for fs in fat ext2 ; do " 					\
+					"${fs}load ${dtype} ${disk}:1 0x10000000 ${splim};"	\
+					" bmp d 0x10000000 ; " 					\
+						"${fs}load " 					\
+						"${dtype} ${disk}:1 " 				\
+						"${imxloadaddr}"				\
+						"/${script}" 					\
+						"&& source ${imxloadaddr} ; " 			\
+				"done ; " 							\
+			"done ; " 								\
+		"done; " 									\
+		"setenv current_disk ${disk};"							\
+		"setenv current_type ${dtype};"							\
+		"setenv stdout serial,vga ; " 							\
+		"echo ; echo 6x_bootscript not found ; " 					\
+		"echo ; echo serial console at 115200, 8N1 ; echo ; " 				\
+		"echo details at www.synexxus.com/ ; " 						\
+		"setenv stdout serial\0" 							\
+	"upgradeu=for dtype in " CONFIG_DRIVE_TYPES "; do " 					\
+		"for disk in 0 1 ; do ${dtype} dev ${disk} ;" 					\
+		     "for fs in fat ext2 ; do " 						\
+				"${fs}load ${dtype} ${disk}:1 ${imxloadaddr} " 			\
+					"/6x_upgrade " 						\
+					"&& source ${imxloadaddr} ; " 				\
+			"done ; " 								\
+		"done ; " 									\
+	"done\0" 										\
 
+/*
 #define CONFIG_BOOTCOMMAND \
-	   "mmc dev ${mmcdev}; if mmc rescan; then " \
-		   "if run loadbootscript; then " \
-			   "run bootscript; " \
-		   "else " \
-			   "if run loaduimage; then " \
-				   "run mmcboot; " \
-			   "else run netboot; " \
-			   "fi; " \
-		   "fi; " \
-	   "else run netboot; fi"
-
+	"setenv imxloadaddr 0x10800000; \0" \
+	"for dtype in " CONFIG_DRIVE_TYPES "; do " \
+		"if test ${dtype} = sata ; then " \
+			"for disk in 1 ; do ${dtype} dev ${disk} ;" \
+				"for fs in fat ext2 ; do " \
+					"${fs}load " \
+						"${dtype} ${disk} " \
+						"${imxloadaddr} " \
+						"/${script}" \
+						"&& source ${imxloadaddr} ; " \
+				"done ; " \
+			"done ; " \
+		"else " \
+			"for disk in 0 1 ; do ${dtype} dev ${disk} ;" \
+				"for fs in fat ext2 ; do " \
+					"${fs}load " \
+						"${dtype} ${disk} " \
+						"${imxloadaddr} " \
+						"/${script}" \
+						"&& source ${imxloadaddr} ; " \
+				"done ; " \
+			"done ; " \
+		"fi;" \
+	"done; " \
+	"echo ; Trial 37 ; " \
+	"setenv current_disk disk;"\
+	"setenv current_type dtype;"\
+	"setenv stdout serial,vga ; " \
+	"echo ; echo 6x_bootscript not found ; " \
+	"echo ; echo serial console at 115200, 8N1 ; echo ; " \
+	"echo details at http://www.synexxus.com/ ; " \
+	"setenv stdout serial ;\0" 
+*/
 
 /* Miscellaneous configurable options */
 #define CONFIG_SYS_LONGHELP
@@ -325,12 +346,8 @@
 #define CONFIG_SYS_NO_FLASH
 
 #define CONFIG_ENV_SIZE			(8 * 1024)
-
-#if defined(CONFIG_SABRELITE)
-#define CONFIG_ENV_IS_IN_MMC
-#else
 #define CONFIG_ENV_IS_IN_SPI_FLASH
-#endif
+
 
 #if defined(CONFIG_ENV_IS_IN_MMC)
 #define CONFIG_ENV_OFFSET		(6 * 64 * 1024)
