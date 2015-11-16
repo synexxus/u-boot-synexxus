@@ -188,13 +188,13 @@
 #define CONFIG_DRIVE_MMC
 #endif
 
-#ifdef CONFIG_USB_STORAGE
-#define CONFIG_DRIVE_USB "usb "
-#else
-#define CONFIG_DRIVE_USB
-#endif
+//#ifdef CONFIG_USB_STORAGE
+//#define CONFIG_DRIVE_USB "usb "
+//#else
+//#define CONFIG_DRIVE_USB
+//#endif
 
-#define CONFIG_DRIVE_TYPES CONFIG_DRIVE_SATA CONFIG_DRIVE_MMC CONFIG_DRIVE_USB
+#define CONFIG_DRIVE_TYPES CONFIG_DRIVE_SATA CONFIG_DRIVE_MMC 
 #define CONFIG_UMSDEVS CONFIG_DRIVE_SATA CONFIG_DRIVE_MMC
 
 #if defined(CONFIG_SABRELITE)
@@ -294,7 +294,7 @@
 		"setenv stdout serial,vga ; " \
 		"echo ; echo 6x_bootscript not found ; " \
 		"echo ; echo serial console at 115200, 8N1 ; echo ; " \
-		"echo details at http://boundarydevices.com/6q_bootscript ; " \
+		"echo details at http://synexxus.com/6q_bootscript ; " \
 		"setenv stdout serial;" \
 		"setenv stdin serial,usbkbd;" \
 		"for dtype in ${umsdevs} ; do " \
@@ -425,20 +425,20 @@
 
 #define CONFIG_CMD_ELF
 
-#define CONFIG_USB_GADGET
-#define CONFIG_CMD_USB_MASS_STORAGE
-#define CONFIG_USB_GADGET_MASS_STORAGE
-#define CONFIG_USBDOWNLOAD_GADGET
-#define CONFIG_USB_GADGET_VBUS_DRAW	2
+//#define CONFIG_USB_GADGET
+//#define CONFIG_CMD_USB_MASS_STORAGE
+//#define CONFIG_USB_GADGET_MASS_STORAGE
+//#define CONFIG_USBDOWNLOAD_GADGET
+//#define CONFIG_USB_GADGET_VBUS_DRAW	2
 
 /* Netchip IDs */
 #define CONFIG_G_DNL_VENDOR_NUM 0x0525
 #define CONFIG_G_DNL_PRODUCT_NUM 0xa4a5
-#define CONFIG_G_DNL_MANUFACTURER "Boundary"
+#define CONFIG_G_DNL_MANUFACTURER "Synexxus"
 
-#define CONFIG_CMD_FASTBOOT
-#define CONFIG_ANDROID_BOOT_IMAGE
-#define CONFIG_USB_FASTBOOT_BUF_ADDR   CONFIG_SYS_LOAD_ADDR
-#define CONFIG_USB_FASTBOOT_BUF_SIZE   0x07000000
+//#define CONFIG_CMD_FASTBOOT
+//#define CONFIG_ANDROID_BOOT_IMAGE
+//#define CONFIG_USB_FASTBOOT_BUF_ADDR   CONFIG_SYS_LOAD_ADDR
+//#define CONFIG_USB_FASTBOOT_BUF_SIZE   0x07000000
 
 #endif	       /* __CONFIG_H */

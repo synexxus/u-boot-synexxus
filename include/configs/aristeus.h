@@ -36,6 +36,7 @@
 #define CONFIG_BOARD_EARLY_INIT_F
 #define CONFIG_MISC_INIT_R
 #define CONFIG_MXC_GPIO
+
 #define CONFIG_CI_UDC
 #define CONFIG_USBD_HS
 //#define CONFIG_USB_GADGET_DUALSPEED
@@ -50,6 +51,7 @@
 
 //JREEP ARISTEUS changed MXC_UART_BASE to UART1_BASE
 #define CONFIG_MXC_UART
+
 #define CONFIG_MXC_UART_BASE	       UART1_BASE
 #define CONFIG_CONSOLE_DEV		"ttymxc0"
 #define CONFIG_DEFAULT_FDT_FILE	"imx6q-aristeus.dtb"
@@ -61,7 +63,7 @@
 #define CONFIG_MXC_SPI
 #define CONFIG_SF_DEFAULT_BUS  0
 #define CONFIG_SF_DEFAULT_CS   (0|(IMX_GPIO_NR(3, 19)<<8))
-#define CONFIG_SF_DEFAULT_SPEED 5000000
+#define CONFIG_SF_DEFAULT_SPEED 25000000
 #define CONFIG_SF_DEFAULT_MODE (SPI_MODE_0)
 #define CONFIG_CMD_SPI
 #endif
@@ -93,7 +95,7 @@
 #define CONFIG_CMD_SATA
 #endif
 
-#define CONFIG_CMD_GETTIME
+//#define CONFIG_CMD_GETTIME
 
 /*
  * SATA Configs
@@ -177,7 +179,7 @@
 
 #undef CONFIG_CMD_IMLS
 
-#define CONFIG_BOOTDELAY	       1
+#define CONFIG_BOOTDELAY	       2
 
 #define CONFIG_PREBOOT                 ""
 
@@ -196,39 +198,42 @@
 #define CONFIG_DRIVE_MMC
 #endif
 
-#ifdef CONFIG_USB_STORAGE
-#define CONFIG_DRIVE_USB "usb "
-#else
-#define CONFIG_DRIVE_USB
-#endif
+//#ifdef CONFIG_USB_STORAGE
+//#define CONFIG_DRIVE_USB "usb "
+//#else
+
+//#define CONFIG_DRIVE_USB
+//#endif
+
 
 //#define CONFIG_DRIVE_TYPES CONFIG_DRIVE_SATA CONFIG_DRIVE_MMC
-#define CONFIG_DRIVE_TYPES CONFIG_DRIVE_SATA CONFIG_DRIVE_MMC CONFIG_DRIVE_USB
+#define CONFIG_DRIVE_TYPES CONFIG_DRIVE_SATA CONFIG_DRIVE_MMC //CONFIG_DRIVE_USB
 #define CONFIG_UMSDEVS CONFIG_DRIVE_SATA CONFIG_DRIVE_MMC
 
-//#if defined(CONFIG_SABRELITE)
 #define CONFIG_EXTRA_ENV_SETTINGS \
-	"script=boot.scr\0" \
+	"bscript=6x_bootscript\0" \
+	"script=uEnv.txt\0" \
 	"uimage=uImage\0" \
 	"zimage=zImage\0" \
 	"console=ttymxc0\0" \
+	"panel=Hannstar-XGA18\0" \
 	"fdt_high=0xffffffff\0" \
 	"initrd_high=0xffffffff\0" \
-	"fdt_file=imx6q-aristeus.dtb\0" \
-	"fdt_addr=0x18000000\0" \
+	"fdt_file=imx6q-aristeus-LVDS1-1024-18.dtb\0" \
+	"fdt_addr=0x11000000\0" \
+	"bootargs=console=ttymxc0,115200 root=/dev/mmcblk3p2 rootwait rw fixrtc\0" \
 	"boot_fdt=try\0" \
+	"loadaddr=0x12000000\0" \
 	"ip_dyn=yes\0" \
-	"mmcdev=0\0" \
+	"mmcdev=1\0" \
 	"mmcpart=1\0" \
-	"mmcroot=/dev/mmcblk0p2 rootwait ro\0" \
-	"mmcargs=setenv bootargs console=${console},${baudrate} " \
-		"root=${mmcroot}\0" \
-	"loadbootscript=" \
-		"fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script};\0" \
+	"mmcroot=/dev/mmcblk3p2 rootwait rw\0" \
+	"mmcargs=setenv bootargs console=${console},${baudrate} root=${mmcroot}\0" \
+	"loadbootscript= fatload mmc ${mmcdev} ${loadaddr} ${bscript};\0" \
 	"bootscript=echo Running bootscript from mmc ...; " \
-		"source\0" \
-	"loaduimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${uimage}\0" \
-	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
+		"source ${loadaddr} \0" \
+	"loaduimage=fatload mmc ${mmcdev} ${loadaddr} ${uimage}\0" \
+	"loadfdt=fatload mmc ${mmcdev} ${fdt_addr} ${fdt_file}\0" \
 	"mmcboot=echo Booting from mmc ...; " \
 		"run mmcargs; " \
 		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
@@ -276,11 +281,10 @@
 		   "else " \
 			   "if run loaduimage; then " \
 				   "run mmcboot; " \
-			   "else run netboot; " \
+			    \
 			   "fi; " \
 		   "fi; " \
-	   "else run netboot; fi"
-
+	   "fi"
 
 /* Miscellaneous configurable options */
 #define CONFIG_SYS_LONGHELP
@@ -354,6 +358,7 @@
 #define CONFIG_CMD_BMP
 
 #define CONFIG_CMD_TIME
+
 #define CONFIG_SYS_ALT_MEMTEST
 
 #define CONFIG_CMD_BOOTZ
@@ -363,17 +368,17 @@
 
 /*
  * PCI express
- * Added:07/07/2014
+ * Added:07/07/2014 removed 08/31/2015 due to hang of linux (use only for bootloader tests)
  */
-#define CONFIG_CMD_PCI
+//#define CONFIG_CMD_PCI
 #ifdef CONFIG_CMD_PCI
 #define CONFIG_PCI
 #define CONFIG_PCI_PNP
 #define CONFIG_PCI_SCAN_SHOW
 #define CONFIG_PCIE_IMX
 #define CONFIG_PCIE_IMX_PERST_GPIO	IMX_GPIO_NR(2, 15)
-// Aristeus doesn't implement this
-//#define CONFIG_PCIE_IMX_POWER_GPIO	IMX_GPIO_NR(3, 19)
+// Aristeus rev1 updated 08/28/2015
+#define CONFIG_PCIE_IMX_POWER_GPIO	IMX_GPIO_NR(4, 05)
 #endif
 
 #define CONFIG_CMD_ELF
