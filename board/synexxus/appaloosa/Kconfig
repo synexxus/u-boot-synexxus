@@ -1,0 +1,15 @@
+if TARGET_APPALOOSA
+
+config SYS_BOARD
+	default "appaloosa"
+
+config SYS_VENDOR
+	default "synexxus"
+
+config SYS_SOC
+	default "mx6"
+
+config SYS_CONFIG_NAME
+	default "appaloosa"
+
+endif

@@ -715,6 +715,20 @@ config TARGET_MX6SXSABRESD
 	select DM
 	select DM_THERMAL
 
+config TARGET_ARISTEUS
+        bool "Support Aristeus"
+        select CPU_V7
+        select SUPPORT_SPL
+        select DM
+        select DM_THERMAL
+
+config TARGET_APPALOOSA
+        bool "Support Appaloosa"
+        select CPU_V7
+        select SUPPORT_SPL
+        select DM
+        select DM_THERMAL
+
 config TARGET_GW_VENTANA
 	bool "Support gw_ventana"
 	select CPU_V7
@@ -1137,6 +1151,7 @@ source "board/st-ericsson/u8500/Kconfig"
 source "board/st/stm32f429-discovery/Kconfig"
 source "board/st/stv0991/Kconfig"
 source "board/sunxi/Kconfig"
+source "board/synexxus/appaloosa/Kconfig"
 source "board/syteco/zmx25/Kconfig"
 source "board/tbs/tbs2910/Kconfig"
 source "board/ti/am335x/Kconfig"

@@ -1,0 +1,6 @@
+APPALOOSA BOARD
+M:	Aaron Thomas  <athomas@synexxus.com>
+S:	Maintained
+F:	board/synexxus/appaloosa/
+F:	include/configs/appaloosa.h
+F:	configs/synexxus_appaloosa_defconfig
